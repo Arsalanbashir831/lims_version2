@@ -114,7 +114,7 @@ const ProficiencyTestingPage = () => {
       const response = await fetch("/api/export-excel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ columns, data, logoBase64, fileName }),
+        body: JSON.stringify({ columns, data, fileName, logoBase64 ,imagePath:'logo.png' }),
       });
 
       if (!response.ok) {

@@ -1,29 +1,20 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
+import fs from "fs";
+import path from "path";
 
-/**
- * POST /api/download-sheet
- *
- * Expects a JSON body:
- * {
- *   "columns": [ { key: "fieldName", label: "Column Header" }, ... ],
- *   "data": [ { fieldName: value, ... }, ... ],
- *   "fileName": optional string for output file name
- * }
- */
 export async function POST(req) {
   try {
-    // 1) Parse request body
-    const { columns, data, fileName } = await req.json();
+    // Parse request body
+    const { columns, data, fileName, logoBase64, imagePath } = await req.json();
 
-    // 2) Create a new workbook and a worksheet
+    // Create a new workbook and worksheet
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Records");
 
-    // --- A) Apply some default styling/column widths
-    // Enough columns to handle your dynamic table plus some space for header merges
+    // Set column widths for a professional layout
     worksheet.columns = [
-      { header: "A", width: 20 },
+      { header: "A", width: 25 },
       { header: "B", width: 40 },
       { header: "C", width: 20 },
       { header: "D", width: 20 },
@@ -31,43 +22,63 @@ export async function POST(req) {
       { header: "F", width: 20 },
     ];
 
-    // --- B) Create a "Header" Section
-    // Merge cells for a "company title" row
-    worksheet.mergeCells("B1:E1");
-    const titleCell = worksheet.getCell("B1");
+    // Process Logo:
+    // Priority: If logoBase64 is provided, use it; else if imagePath is provided, attempt to read from local file.
+    let logoImageId;
+    if (logoBase64) {
+      // Use base64 directly (make sure to remove any prefix if present)
+      logoImageId = workbook.addImage({ base64: logoBase64, extension: "png" });
+    } else if (imagePath) {
+      const absoluteLogoPath = path.join(process.cwd(), "public", imagePath);
+      if (fs.existsSync(absoluteLogoPath)) {
+        const logoBuffer = fs.readFileSync(absoluteLogoPath);
+        logoImageId = workbook.addImage({ buffer: logoBuffer, extension: "png" });
+      }
+    }
+
+    // Insert the logo into the worksheet (if available)
+    if (logoImageId !== undefined && logoImageId !== null) {
+      // Merge cells A1:C1 as the image container
+      worksheet.mergeCells("A1:C1");
+      worksheet.addImage(logoImageId, {
+        tl: { col: 0, row: 0 },
+        br: { col: 3, row: 1 },
+        editAs: "oneCell",
+      });
+      worksheet.getRow(1).height = 80;
+    }
+
+    // Create Header Section (start header text at row 3 to avoid overlapping the logo)
+    worksheet.mergeCells("B3:E3");
+    const titleCell = worksheet.getCell("B3");
     titleCell.value = "GRIPCO MATERIAL TESTING";
     titleCell.font = { bold: true, size: 16 };
     titleCell.alignment = { horizontal: "center", vertical: "middle" };
-    worksheet.getRow(1).height = 25;
+    worksheet.getRow(3).height = 25;
 
-    // Next row for coordinator authority
-    worksheet.mergeCells("B2:E2");
-    const coordinatorCell = worksheet.getCell("B2");
+    worksheet.mergeCells("B4:E4");
+    const coordinatorCell = worksheet.getCell("B4");
     coordinatorCell.value = "LIMS Coordinator on authority of GRIPCO MATERIAL TESTING";
     coordinatorCell.font = { bold: true, size: 12 };
-    coordinatorCell.alignment = { horizontal: "center" };
-    worksheet.getRow(2).height = 20;
+    coordinatorCell.alignment = { horizontal: "center", vertical: "middle" };
+    worksheet.getRow(4).height = 20;
 
-    // Some blank spacing row if desired
-    worksheet.getRow(3).height = 5;
+    worksheet.getRow(5).height = 5; // Blank spacing row
 
-    // Statement label row
-    worksheet.mergeCells("B4:E4");
-    const statementLabel = worksheet.getCell("B4");
+    worksheet.mergeCells("B6:E6");
+    const statementLabel = worksheet.getCell("B6");
     statementLabel.value = "Statement:";
     statementLabel.font = { bold: true, size: 12 };
     statementLabel.alignment = { horizontal: "center" };
 
-    // Registration row
-    worksheet.mergeCells("B5:E5");
-    const regCell = worksheet.getCell("B5");
+    worksheet.mergeCells("B7:E7");
+    const regCell = worksheet.getCell("B7");
     regCell.value = "Commercial Registration No: 2015253768 (IAS accredited lab reference # TL-1305)";
     regCell.font = { size: 11 };
     regCell.alignment = { horizontal: "center" };
 
-    // A longer statement
-    worksheet.mergeCells("B6:E6");
-    const longStatementCell = worksheet.getCell("B6");
+    worksheet.mergeCells("B8:E8");
+    const longStatementCell = worksheet.getCell("B8");
     longStatementCell.value =
       "All Works and services carried out by GLOBAL RESOURCES INSPECTION CONTRACTING COMPANY (GRIPCO Material Testing Saudia) " +
       "are subjected to and conducted with the standard terms and condition of GRIPCO Material Testing Which are available at " +
@@ -76,23 +87,18 @@ export async function POST(req) {
       "the organization indicated. No deviations were observed during the testing process.";
     longStatementCell.font = { size: 10 };
     longStatementCell.alignment = { horizontal: "center", wrapText: true };
-    worksheet.getRow(6).height = 50;
+    worksheet.getRow(8).height = 50;
 
-    // Another blank row
-    worksheet.getRow(7).height = 5;
+    worksheet.getRow(9).height = 5; // Additional blank spacing
 
-    // Title row for the record name or fileName
-    worksheet.mergeCells("B8:E8");
-    const recordTitle = worksheet.getCell("B8");
+    worksheet.mergeCells("B10:E10");
+    const recordTitle = worksheet.getCell("B10");
     recordTitle.value = fileName || "Testing Records";
     recordTitle.font = { bold: true, size: 12 };
     recordTitle.alignment = { horizontal: "center" };
 
-    // --- C) Write the Table Data
-    // We'll start the table at row 10
-    let currentRow = 10;
-
-    // 1) Insert Table Headers
+    // Write Table Data: Start table at row 11
+    let currentRow = 11;
     const headerRow = worksheet.getRow(currentRow);
     columns.forEach((col, idx) => {
       const cell = headerRow.getCell(idx + 1);
@@ -102,7 +108,7 @@ export async function POST(req) {
       cell.fill = {
         type: "pattern",
         pattern: "solid",
-        fgColor: { argb: "FFCCCCCC" }, // Light gray
+        fgColor: { argb: "FFCCCCCC" },
       };
       cell.border = {
         top: { style: "thin" },
@@ -114,7 +120,6 @@ export async function POST(req) {
     headerRow.commit();
     currentRow++;
 
-    // 2) Insert Table Data Rows
     data.forEach((rowObj) => {
       const row = worksheet.getRow(currentRow);
       columns.forEach((col, idx) => {
@@ -132,49 +137,49 @@ export async function POST(req) {
       currentRow++;
     });
 
-    // Some spacing after table
+    // Add spacing after table
     currentRow += 2;
 
-    // --- D) Footer
-    // We'll place the footer at the bottom, starting at currentRow
+    // Footer Section: Each line in its own merged row (B:E)
     worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
-    const footLine1 = worksheet.getCell(`B${currentRow}`);
-    footLine1.value = "____________________";
-    footLine1.alignment = { horizontal: "center" };
-    footLine1.font = { bold: true, size: 11 };
+    const footerRow1 = worksheet.getCell(`B${currentRow}`);
+    footerRow1.value = "____________________";
+    footerRow1.alignment = { horizontal: "center", vertical: "middle" };
+    footerRow1.font = { bold: true, size: 11 };
     currentRow++;
 
     worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
-    const footLine2 = worksheet.getCell(`B${currentRow}`);
-    footLine2.value = "LIMS Coordinator on authority of";
-    footLine2.alignment = { horizontal: "center" };
-    footLine2.font = { bold: true, size: 11 };
+    const footerRow2 = worksheet.getCell(`B${currentRow}`);
+    footerRow2.value = "LIMS Coordinator on authority of";
+    footerRow2.alignment = { horizontal: "center", vertical: "middle" };
+    footerRow2.font = { bold: true, size: 11 };
     currentRow++;
 
     worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
-    const footLine3 = worksheet.getCell(`B${currentRow}`);
-    footLine3.value = "GRIPCO MATERIAL TESTING";
-    footLine3.alignment = { horizontal: "center" };
-    footLine3.font = { bold: true, size: 11 };
+    const footerRow3 = worksheet.getCell(`B${currentRow}`);
+    footerRow3.value = "GRIPCO MATERIAL TESTING";
+    footerRow3.alignment = { horizontal: "center", vertical: "middle" };
+    footerRow3.font = { bold: true, size: 11 };
     currentRow++;
 
-    // Optionally add spacing
-    worksheet.getRow(currentRow).height = 8;
-    currentRow++;
-
-    // Footer statement
+    // Blank row for spacing
     worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
-    const footLine4 = worksheet.getCell(`B${currentRow}`);
-    footLine4.value =
-      "All Works and services carried out by GLOBAL RESOURCES INSPECTION CONTRACTING COMPANY " +
-      "(GRIPCO Material Testing Saudia)... etc.";
-    footLine4.alignment = { horizontal: "center", wrapText: true };
-    footLine4.font = { bold: true, size: 10 };
+    const blankRow = worksheet.getCell(`B${currentRow}`);
+    blankRow.value = "";
+    currentRow++;
+
+    // Footer final statement
+    worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
+    const footerRow4 = worksheet.getCell(`B${currentRow}`);
+    footerRow4.value =
+      "All Works and services carried out by GLOBAL RESOURCES INSPECTION CONTRACTING COMPANY (GRIPCO Material Testing Saudia)... etc.";
+    footerRow4.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    footerRow4.font = { bold: true, size: 11 };
     worksheet.getRow(currentRow).height = 40;
 
-    // --- E) Generate Excel Buffer & Return
-    const dynamicFileName = fileName || "Proficiency_Testing.xlsx";
+    // Generate Excel file buffer
     const buffer = await workbook.xlsx.writeBuffer();
+    const dynamicFileName = fileName || "Proficiency_Testing.xlsx";
 
     return new NextResponse(buffer, {
       status: 200,
@@ -188,4 +193,3 @@ export async function POST(req) {
     return new NextResponse("Error generating file", { status: 500 });
   }
 }
-      

@@ -5,6 +5,7 @@ import ReusableTable from "@/components/common/ReusableTable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
+import { getBase64FromUrl } from "@/lib/utils";
 
 const CalibrationTestingPage = () => {
   const columns = [
@@ -103,11 +104,16 @@ const CalibrationTestingPage = () => {
   };
 
   const handleDownloadExcel = async () => {
+      const dataUrl = await getBase64FromUrl("/logo.png");
+        // dataUrl is something like "data:image/png;base64,iVBORw0KG..."
+    
+        // 2) We only need the part after "base64,"
+        const base64String = dataUrl.split("base64,")[1];
     try {
       const response = await fetch("/api/export-excel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ columns, data, fileName }),
+        body: JSON.stringify({ columns, data, fileName , base64String ,imagePath:'logo.png' }),
       });
 
       if (!response.ok) {

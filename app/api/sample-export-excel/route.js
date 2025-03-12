@@ -43,7 +43,7 @@ export async function POST(req) {
 		if (logoImageId !== undefined && logoImageId !== null) {
 			worksheet.addImage(logoImageId, {
 				tl: { col: 0, row: 0 },
-				ext: { width: 150, height: 50 },
+				ext: { width: 350, height: 50 },
 			});
 			worksheet.getRow(1).height = 80;
 		}
