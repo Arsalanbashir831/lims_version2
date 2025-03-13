@@ -10,6 +10,31 @@ import { Plus, Trash } from "lucide-react";
 import TestMethodsDropdown from "@/components/common/TestMethodsDropdown";
 import { testMethods } from "@/lib/constants";
 
+// Arrays for select options
+const typeOfSamples = [
+	"carbon steel",
+	"stainless steel",
+	"nickle",
+	"duplex ss",
+	"cast iron",
+	"cs",
+	"zinc coated",
+	"flanges",
+];
+
+const testTypes = [
+	"round",
+	"plate",
+	"pipe",
+	"fitting",
+	"fastner",
+	"clad pipe",
+	"pipe",
+	"flanges",
+	"sheet",
+	"cs",
+];
+
 /* Reusable form field components */
 const LabeledInput = ({ label, ...props }) => (
 	<div className="mb-4">
@@ -49,27 +74,35 @@ const SampleDetailRow = ({
 					className="w-full"
 				/>
 			</td>
-			{/* Type of Sample */}
+			{/* Type of Sample (Select Dropdown) */}
 			<td className="p-2">
-				<Input
-					type="text"
+				<select
 					name="sampleType"
 					value={detail.sampleType}
 					onChange={handleChange}
-					placeholder="Enter type of sample"
-					className="w-full"
-				/>
+					className="w-full rounded border border-gray-300 p-2">
+					<option value="">Select Type of Sample</option>
+					{typeOfSamples.map((type) => (
+						<option key={type} value={type}>
+							{type}
+						</option>
+					))}
+				</select>
 			</td>
-			{/* Test Type */}
+			{/* Test Type (Select Dropdown) */}
 			<td className="p-2">
-				<Input
-					type="text"
+				<select
 					name="testType"
 					value={detail.testType}
 					onChange={handleChange}
-					placeholder="Enter test type"
-					className="w-full"
-				/>
+					className="w-full rounded border border-gray-300 p-2">
+					<option value="">Select Test Type</option>
+					{testTypes.map((test) => (
+						<option key={test} value={test}>
+							{test}
+						</option>
+					))}
+				</select>
 			</td>
 			{/* Quantity */}
 			<td className="p-2">
@@ -126,7 +159,7 @@ const SampleDetailsTable = ({
 	<div className="p-3 mb-4">
 		<h3 className="font-bold text-gray-700 mb-3">Sample Details</h3>
 		<div className="overflow-x-auto overflow-y-hidden">
-			<table className="w-full min-w-[1000px]">
+			<table className="w-full min-w-[1100px]">
 				<thead className="bg-gray-200">
 					<tr>
 						<th className="p-2">Description</th>
@@ -135,7 +168,7 @@ const SampleDetailsTable = ({
 						<th className="p-2">Qty</th>
 						<th className="p-2">Condition</th>
 						<th className="p-2">Test Methods</th>
-						<th className="p-2">No. of Test Methods</th>
+						<th className="p-2">Count</th>
 						<th className="p-2">Actions</th>
 					</tr>
 				</thead>
@@ -162,10 +195,10 @@ const SampleDetailsTable = ({
 );
 
 /* Main Component */
-const SampleReceivingRecordsPage = () => {
+const AddSampleLots = () => {
 	const initialReceiveDate = new Date().toISOString().split("T")[0];
 
-	// Update state: Remove global typeOfSample and testType, as these are now per row.
+	// Global form state (without per-row fields)
 	const [sample, setSample] = useState({
 		clientName: "",
 		projectName: "",
@@ -175,7 +208,7 @@ const SampleReceivingRecordsPage = () => {
 		remarks: "",
 	});
 
-	// Initialize each row with testType in addition to existing properties.
+	// Initialize sample details with per-row fields, including sampleType and testType as select values.
 	const [sampleDetails, setSampleDetails] = useState([
 		{
 			description: "",
@@ -317,4 +350,4 @@ const SampleReceivingRecordsPage = () => {
 	);
 };
 
-export default SampleReceivingRecordsPage;
+export default AddSampleLots;
