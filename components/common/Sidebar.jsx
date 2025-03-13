@@ -18,7 +18,7 @@ const navItems = [
 			{ name: "Calibration Testing", href: "/testing/calibration" },
 		],
 	},
-	{ name: "Lab Equipments", href: "/records/lab-equipments" },
+	{ name: "Lab Equipments", href: "/lab-equipments" },
 	{
 		name: "Records",
 		subItems: [
