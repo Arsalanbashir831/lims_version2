@@ -30,6 +30,7 @@ const navItems = [
     subItems: [
       { name: "Lab Test", href: "/lab-management/lab-test" },
       { name: "Test Certificates", href: "/lab-management/test-certificates" },
+      { name: "Worksheets", href: "/lab-management/worksheets" },
     ],
   },
   {
