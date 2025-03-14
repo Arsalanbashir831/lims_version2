@@ -1,4 +1,23 @@
 import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
+	Table,
+	TableHeader,
+	TableBody,
+	TableRow,
+	TableHead,
+	TableCell,
+} from "@/components/ui/table";
 
 // Sample data as provided.
 const sampleJobs = [
@@ -57,7 +76,6 @@ function SpecimenIdInput({ specimenIds, setSpecimenIds, maxSpecimenCount }) {
 
 	const handleKeyDown = (e) => {
 		if (e.key === "Enter" && inputValue.trim() !== "") {
-			// Only add if current count is less than maxSpecimenCount.
 			if (maxSpecimenCount && specimenIds.length >= maxSpecimenCount) {
 				e.preventDefault();
 				return;
@@ -77,13 +95,12 @@ function SpecimenIdInput({ specimenIds, setSpecimenIds, maxSpecimenCount }) {
 					{id}
 				</span>
 			))}
-			<input
-				type="text"
-				className="flex-1 outline-none"
+			<Input
 				value={inputValue}
 				onChange={(e) => setInputValue(e.target.value)}
 				onKeyDown={handleKeyDown}
 				placeholder="Enter ID and press Enter"
+				className="flex-1 outline-none"
 			/>
 		</div>
 	);
@@ -109,39 +126,29 @@ function SampleRequestForm() {
 	// State for job selection and sample item rows.
 	const [selectedJobId, setSelectedJobId] = useState("");
 	const [selectedJob, setSelectedJob] = useState(null);
-	const [numSampleItems, setNumSampleItems] = useState(0);
-	const [rows, setRows] = useState([]);
+	// Initialize with one default row.
+	const [rows, setRows] = useState([getDefaultRow()]);
 
-	// When a job is selected, set the job data.
-	const handleJobSelect = (e) => {
-		const jobId = e.target.value;
-		setSelectedJobId(jobId);
-		const job = sampleJobs.find((j) => j.jobId === jobId);
+	// When a job is selected, set the job data and reset rows.
+	const handleJobSelect = (value) => {
+		setSelectedJobId(value);
+		const job = sampleJobs.find((j) => j.jobId === value);
 		setSelectedJob(job);
-		// Reset rows when the job changes.
-		setRows([]);
-		setNumSampleItems(0);
+		setRows([getDefaultRow()]);
 	};
 
-	// Update rows without re-creating the entire table.
-	const handleNumItemsChange = (e) => {
-		const value = parseInt(e.target.value, 10) || 0;
-		setNumSampleItems(value);
-		setRows((prevRows) => {
-			const currentCount = prevRows.length;
-			if (value > currentCount) {
-				// Append new rows.
-				const additionalRows = Array.from(
-					{ length: value - currentCount },
-					() => getDefaultRow()
-				);
-				return [...prevRows, ...additionalRows];
-			} else if (value < currentCount) {
-				// Remove rows from the end.
-				return prevRows.slice(0, value);
-			}
-			return prevRows;
-		});
+	// Add a new row.
+	const handleAddRow = () => {
+		setRows([...rows, getDefaultRow()]);
+	};
+
+	// Remove a row (only if more than one row exists).
+	const handleRemoveRow = (index) => {
+		if (rows.length > 1) {
+			const newRows = [...rows];
+			newRows.splice(index, 1);
+			setRows(newRows);
+		}
 	};
 
 	// Update a row field. If "itemNo" changes, auto-fill description, heatNo, and test methods.
@@ -186,205 +193,204 @@ function SampleRequestForm() {
 			<h2 className="text-xl font-bold mb-4">Assign Specimens to Job Items</h2>
 
 			<div className="mb-4">
-				<label className="block font-medium mb-1">Select Job ID:</label>
-				<select
-					value={selectedJobId}
-					onChange={handleJobSelect}
-					className="border p-2 w-full">
-					<option value="">Select Job</option>
-					{sampleJobs.map((job) => (
-						<option key={job.jobId} value={job.jobId}>
-							{job.jobId} - {job.projectName}
-						</option>
-					))}
-				</select>
+				<Label className="block font-medium mb-1">Select Job ID:</Label>
+				<Select value={selectedJobId} onValueChange={handleJobSelect}>
+					<SelectTrigger className="w-full">
+						<SelectValue placeholder="Select Job" />
+					</SelectTrigger>
+					<SelectContent>
+						{sampleJobs.map((job) => (
+							<SelectItem key={job.jobId} value={job.jobId}>
+								{job.jobId} - {job.projectName}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
 			</div>
 
-			{selectedJob && (
-				<div className="mb-4">
-					<label className="block font-medium mb-1">
-						Number of Sample Items:
-					</label>
-					<input
-						type="number"
-						min="0"
-						value={numSampleItems}
-						onChange={handleNumItemsChange}
-						className="border p-2 w-full"
-					/>
-				</div>
-			)}
-
 			{rows.length > 0 && (
-				<div className="overflow-x-auto mb-4">
-					<table className="min-w-full border-collapse border">
-						<thead>
-							<tr className="bg-gray-200">
-								<th className="border p-2">Item No.</th>
-								<th className="border p-2">Item Description</th>
-								<th className="border p-2">Test Method</th>
-								<th className="border p-2">Heat #</th>
-								<th className="border p-2">
-									Dimension/Specification &amp; Specimen Location
-								</th>
-								<th className="border p-2">No of Samples</th>
-								<th className="border p-2">No of Specimen</th>
-								<th className="border p-2">Assign Specimen ID</th>
-								<th className="border p-2">Planned Test Date</th>
-								<th className="border p-2">Request By</th>
-								<th className="border p-2">Remarks</th>
-							</tr>
-						</thead>
-						<tbody>
-							{rows.map((row, index) => (
-								<tr key={index} className="border-b">
-									{/* Item No. Selection */}
-									<td className="border p-2">
-										<select
-											value={row.itemNo}
-											onChange={(e) =>
-												handleRowChange(index, "itemNo", e.target.value)
-											}
-											className="border p-2">
-											<option value="">Select Item</option>
-											{selectedJob.sampleDetails.map((item, idx) => (
-												<option key={idx} value={idx}>
-													{`Item ${idx + 1}`}
-												</option>
-											))}
-										</select>
-									</td>
-									{/* Item Description (auto-filled) */}
-									<td className="border p-2">
-										<input
-											type="text"
-											value={row.itemDescription}
-											readOnly
-											className="border p-2 bg-gray-100"
-										/>
-									</td>
-									{/* Test Method dropdown */}
-									<td className="border p-2">
-										<select
-											value={row.testMethod}
-											onChange={(e) =>
-												handleRowChange(index, "testMethod", e.target.value)
-											}
-											className="border p-2"
-											disabled={
-												!row.availableTestMethods ||
-												row.availableTestMethods.length === 0
-											}>
-											<option value="">Select Test Method</option>
-											{row.availableTestMethods &&
-												row.availableTestMethods.map((method, idx) => (
-													<option key={idx} value={method}>
-														{method}
-													</option>
-												))}
-										</select>
-									</td>
-									{/* Heat # (auto-filled) */}
-									<td className="border p-2">
-										<input
-											type="text"
-											value={row.heatNo}
-											readOnly
-											className="border p-2 bg-gray-100"
-										/>
-									</td>
-									{/* Dimension/Specification & Specimen Location */}
-									<td className="border p-2">
-										<input
-											type="text"
-											value={row.dimensionSpec}
-											onChange={(e) =>
-												handleRowChange(index, "dimensionSpec", e.target.value)
-											}
-											className="border p-2"
-										/>
-									</td>
-									{/* No of Samples */}
-									<td className="border p-2">
-										<input
-											type="number"
-											value={row.noOfSamples}
-											onChange={(e) =>
-												handleRowChange(index, "noOfSamples", e.target.value)
-											}
-											className="border p-2"
-										/>
-									</td>
-									{/* No of Specimen */}
-									<td className="border p-2">
-										<input
-											type="number"
-											value={row.noOfSpecimen}
-											onChange={(e) =>
-												handleRowChange(index, "noOfSpecimen", e.target.value)
-											}
-											className="border p-2"
-										/>
-									</td>
-									{/* Assign Specimen ID */}
-									<td className="border p-2">
-										<SpecimenIdInput
-											specimenIds={row.specimenIds}
-											setSpecimenIds={(ids) =>
-												handleSpecimenIdsChange(index, ids)
-											}
-											maxSpecimenCount={parseInt(row.noOfSpecimen, 10) || 0}
-										/>
-									</td>
-									{/* Planned Test Date */}
-									<td className="border p-2">
-										<input
-											type="date"
-											value={row.plannedTestDate}
-											onChange={(e) =>
-												handleRowChange(
-													index,
-													"plannedTestDate",
-													e.target.value
-												)
-											}
-											className="border p-2"
-										/>
-									</td>
-									{/* Request By */}
-									<td className="border p-2">
-										<input
-											type="text"
-											value={row.requestBy}
-											onChange={(e) =>
-												handleRowChange(index, "requestBy", e.target.value)
-											}
-											className="border p-2"
-										/>
-									</td>
-									{/* Remarks */}
-									<td className="border p-2">
-										<textarea
-											value={row.remarks}
-											onChange={(e) =>
-												handleRowChange(index, "remarks", e.target.value)
-											}
-											className="border p-2"
-										/>
-									</td>
-								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
+				<>
+					<div className="overflow-x-auto mb-4">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>Item No.</TableHead>
+									<TableHead>Item Description</TableHead>
+									<TableHead>Test Method</TableHead>
+									<TableHead>Heat #</TableHead>
+									<TableHead>
+										Dimension/Specification &amp; Specimen Location
+									</TableHead>
+									<TableHead>No of Samples</TableHead>
+									<TableHead>No of Specimen</TableHead>
+									<TableHead>Assign Specimen ID</TableHead>
+									<TableHead>Planned Test Date</TableHead>
+									<TableHead>Request By</TableHead>
+									<TableHead>Remarks</TableHead>
+									<TableHead>Actions</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{rows.map((row, index) => (
+									<TableRow key={index}>
+										{/* Item No. Selection */}
+										<TableCell>
+											<Select
+												value={row.itemNo}
+												onValueChange={(value) =>
+													handleRowChange(index, "itemNo", value)
+												}>
+												<SelectTrigger className="w-full">
+													<SelectValue placeholder="Select Item" />
+												</SelectTrigger>
+												<SelectContent>
+													{selectedJob?.sampleDetails.map((item, idx) => (
+														<SelectItem key={idx} value={String(idx)}>
+															{`Item ${idx + 1}`}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</TableCell>
+										{/* Item Description (auto-filled) */}
+										<TableCell>
+											<Input
+												value={row.itemDescription}
+												readOnly
+												className="bg-gray-100"
+											/>
+										</TableCell>
+										{/* Test Method dropdown */}
+										<TableCell>
+											<Select
+												value={row.testMethod}
+												onValueChange={(value) =>
+													handleRowChange(index, "testMethod", value)
+												}
+												disabled={
+													!row.availableTestMethods ||
+													row.availableTestMethods.length === 0
+												}>
+												<SelectTrigger className="w-full">
+													<SelectValue placeholder="Select Test Method" />
+												</SelectTrigger>
+												<SelectContent>
+													{row.availableTestMethods?.map((method, idx) => (
+														<SelectItem key={idx} value={method}>
+															{method}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</TableCell>
+										{/* Heat # (auto-filled) */}
+										<TableCell>
+											<Input
+												value={row.heatNo}
+												readOnly
+												className="bg-gray-100"
+											/>
+										</TableCell>
+										{/* Dimension/Specification & Specimen Location */}
+										<TableCell>
+											<Input
+												value={row.dimensionSpec}
+												onChange={(e) =>
+													handleRowChange(
+														index,
+														"dimensionSpec",
+														e.target.value
+													)
+												}
+											/>
+										</TableCell>
+										{/* No of Samples */}
+										<TableCell>
+											<Input
+												type="number"
+												value={row.noOfSamples}
+												onChange={(e) =>
+													handleRowChange(index, "noOfSamples", e.target.value)
+												}
+											/>
+										</TableCell>
+										{/* No of Specimen */}
+										<TableCell>
+											<Input
+												type="number"
+												value={row.noOfSpecimen}
+												onChange={(e) =>
+													handleRowChange(index, "noOfSpecimen", e.target.value)
+												}
+											/>
+										</TableCell>
+										{/* Assign Specimen ID */}
+										<TableCell>
+											<SpecimenIdInput
+												specimenIds={row.specimenIds}
+												setSpecimenIds={(ids) =>
+													handleSpecimenIdsChange(index, ids)
+												}
+												maxSpecimenCount={parseInt(row.noOfSpecimen, 10) || 0}
+											/>
+										</TableCell>
+										{/* Planned Test Date */}
+										<TableCell>
+											<Input
+												type="date"
+												value={row.plannedTestDate}
+												onChange={(e) =>
+													handleRowChange(
+														index,
+														"plannedTestDate",
+														e.target.value
+													)
+												}
+											/>
+										</TableCell>
+										{/* Request By */}
+										<TableCell>
+											<Input
+												value={row.requestBy}
+												onChange={(e) =>
+													handleRowChange(index, "requestBy", e.target.value)
+												}
+											/>
+										</TableCell>
+										{/* Remarks */}
+										<TableCell>
+											<Textarea
+												value={row.remarks}
+												onChange={(e) =>
+													handleRowChange(index, "remarks", e.target.value)
+												}
+											/>
+										</TableCell>
+										{/* Actions */}
+										<TableCell>
+											<Button
+												type="button"
+												onClick={() => handleRemoveRow(index)}
+												disabled={rows.length === 1}
+												variant="destructive">
+												Remove
+											</Button>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</div>
+					<div className="mb-4">
+						<Button type="button" onClick={handleAddRow} className="w-full">
+							Add Row
+						</Button>
+					</div>
+				</>
 			)}
 
 			<div className="mt-4">
-				<button
-					type="submit"
-					className="bg-blue-500 text-white px-4 py-2 rounded">
-					Submit Form
-				</button>
+				<Button type="submit">Submit Form</Button>
 			</div>
 		</form>
 	);
