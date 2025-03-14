@@ -3,36 +3,49 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Trash } from "lucide-react";
 import ReusableSampleLotsTable from "@/components/common/ReusableSlotsTable";
 import { getBase64FromUrl } from "@/lib/utils";
 
 const SampleLotsPage = () => {
-  // Define columns for the main table (excluding sample description)
+  // Updated columns with new keys and labels
   const columns = [
-    { key: "srNo", label: "S.NO" },
+    { key: "srNo", label: "S.No" },
+    { key: "jobId", label: "Job Id" },
+    { key: "projectName", label: "Project Name" },
     { key: "clientName", label: "Client Name" },
-
-    { key: "date", label: "Date" },
-    { key: "phone", label: "Phone" },
-    { key: "receivedBy", label: "Received By" },
-    { key: "signature", label: "Signature" },
+    { key: "specimenId", label: "Specimen Id" },
+    { key: "typeOfSample", label: "Type of Sample" },
+    { key: "testType", label: "Test Type" },
+    { key: "testMethods", label: "Test Methods" },
+    { key: "sampleRecievingDate", label: "Sample Recieving Date" },
+    { key: "testStarted", label: "Test Started" },
+    { key: "testEnded", label: "Test Ended" },
+    { key: "testedBy", label: "Tested By" },
+    { key: "status", label: "Status" },
     { key: "remarks", label: "Remarks" },
+    { key: "discardDate", label: "Discard Date" },
   ];
 
-  // Sample data, with each record having sampleDetails as an array of objects
+  // Updated sample data with all new fields and testMethods as an array
   const [data, setData] = useState([
     {
       srNo: "1",
+      jobId: "J101",
+      projectName: "Project Alpha",
       clientName: "ABC Corp",
-     
-      date: "2024-04-10",
-      phone: "+966 55 123 4567",
-      receivedBy: "John Doe",
-      signature: "Signed",
-      remarks: "No Issues",
+      specimenId: "SP001",
+      typeOfSample: "Blood",
+      testType: "Chemical Analysis",
+      testMethods: ["Method A", "Method C"],
+      sampleRecievingDate: "2024-04-10",
+      testStarted: "2024-04-11",
+      testEnded: "2024-04-12",
+      testedBy: "John Doe",
+      status: "Completed",
+      remarks: "No issues",
+      discardDate: "2024-04-15",
       sampleDetails: [
         { sampleDescription: "Chemical Analysis", qty: "3", condition: "Good" },
         { sampleDescription: "Microbiology Test", qty: "2", condition: "Fair" },
@@ -40,23 +53,29 @@ const SampleLotsPage = () => {
     },
     {
       srNo: "2",
+      jobId: "J102",
+      projectName: "Project Beta",
       clientName: "XYZ Ltd.",
-      date: "2024-04-12",
-      phone: "+966 55 789 1011",
-      receivedBy: "Jane Smith",
-      signature: "Signed",
+      specimenId: "SP002",
+      typeOfSample: "Urine",
+      testType: "Water Quality",
+      testMethods: ["Method B"],
+      sampleRecievingDate: "2024-04-12",
+      testStarted: "2024-04-13",
+      testEnded: "2024-04-14",
+      testedBy: "Jane Smith",
+      status: "Pending",
       remarks: "Requires rechecking",
+      discardDate: "2024-04-20",
       sampleDetails: [
         { sampleDescription: "Water Quality", qty: "10", condition: "Damaged" },
       ],
     },
   ]);
 
-  // State for dialog and its mode ("preview" or "edit")
   const [selectedRow, setSelectedRow] = useState(null);
   const [dialogMode, setDialogMode] = useState("preview");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  // For editing, we use a separate state that includes sampleDetails as an array
   const [editRow, setEditRow] = useState(null);
 
   // Open preview dialog
@@ -66,7 +85,7 @@ const SampleLotsPage = () => {
     setIsDialogOpen(true);
   };
 
-  // Open edit dialog and create a copy for editing
+  // Open edit dialog by cloning the selected row (including sampleDetails)
   const handleEdit = (row) => {
     setSelectedRow(row);
     setEditRow({ ...row, sampleDetails: row.sampleDetails ? [...row.sampleDetails] : [] });
@@ -75,37 +94,35 @@ const SampleLotsPage = () => {
   };
 
   const handleDelete = (row) => {
-    const newData = data.filter((item) => item.srNo !== row.srNo);
-    setData(newData);
+    setData(data.filter((item) => item.srNo !== row.srNo));
   };
 
- 
- // onDownload callback for row-specific Excel download
- const handleDownload = async (row) => {
-    const dataUrl = await getBase64FromUrl("/logo.png");
-    // dataUrl is something like "data:image/png;base64,iVBORw0KG..."
-
-    // 2) We only need the part after "base64,"
-    const base64String = dataUrl.split("base64,")[1];
+  // Row-specific Excel download callback
+  const handleDownload = async (row) => {
     try {
-      // Build payload using dynamic data from the row
+      const dataUrl = await getBase64FromUrl("/logo.png");
+      const base64String = dataUrl.split("base64,")[1];
       const payload = {
         fileName: `Sample_${row.srNo}.xlsx`,
-       
-        logoBase64: base64String, // pass base64 to backend
+        logoBase64: base64String,
         sampleInfo: {
           srNo: row.srNo,
+          jobId: row.jobId,
+          projectName: row.projectName,
           clientName: row.clientName,
-          date: row.date,
-         
+          specimenId: row.specimenId,
+          typeOfSample: row.typeOfSample,
+          testType: row.testType,
+          testMethods: row.testMethods,
+          sampleRecievingDate: row.sampleRecievingDate,
+          testStarted: row.testStarted,
+          testEnded: row.testEnded,
+          testedBy: row.testedBy,
+          status: row.status,
+          remarks: row.remarks,
+          discardDate: row.discardDate,
         },
         sampleDetails: row.sampleDetails || [],
-        otherInfo: {
-            phone: row.phone,
-            receivedBy: row.receivedBy,
-            signature: row.signature,
-            remarks: row.remarks,
-        } // You can add additional info here if needed
       };
 
       const response = await fetch("/api/sample-export-excel", {
@@ -114,9 +131,7 @@ const SampleLotsPage = () => {
         body: JSON.stringify(payload),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to download Excel file");
-      }
+      if (!response.ok) throw new Error("Failed to download Excel file");
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -131,12 +146,17 @@ const SampleLotsPage = () => {
     }
   };
 
-  // For main fields in edit mode
+  // Handle changes in edit mode; converts testMethods from a comma-separated string to an array
   const handleChangeEdit = (e) => {
-    setEditRow({ ...editRow, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === "testMethods") {
+      setEditRow({ ...editRow, testMethods: value.split(",").map((method) => method.trim()) });
+    } else {
+      setEditRow({ ...editRow, [name]: value });
+    }
   };
 
-  // For sample details rows in edit mode
+  // Handle changes in sample details rows during edit
   const handleDetailChange = (index, e) => {
     const { name, value } = e.target;
     const updatedDetails = [...editRow.sampleDetails];
@@ -152,21 +172,22 @@ const SampleLotsPage = () => {
   };
 
   const removeDetailRow = (index) => {
-    const updatedDetails = editRow.sampleDetails.filter((_, i) => i !== index);
-    setEditRow({ ...editRow, sampleDetails: updatedDetails });
+    setEditRow({
+      ...editRow,
+      sampleDetails: editRow.sampleDetails.filter((_, i) => i !== index),
+    });
   };
 
   const handleSaveEdit = () => {
-    const updatedData = data.map((item) =>
-      item.srNo === editRow.srNo ? editRow : item
-    );
-    setData(updatedData);
+    setData(data.map((item) => (item.srNo === editRow.srNo ? editRow : item)));
     setIsDialogOpen(false);
   };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
+     <div className="m-auto w-7xl">
       <h1 className="text-2xl font-semibold text-gray-800 mb-6">Sample Lots</h1>
+
       <ReusableSampleLotsTable
         columns={columns}
         data={data}
@@ -175,8 +196,8 @@ const SampleLotsPage = () => {
         onDelete={handleDelete}
         onDownload={handleDownload}
       />
+     </div>
 
-      {/* Dialog for Preview and Edit */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="p-6 max-w-3xl mx-auto">
           <DialogTitle className="text-center text-xl font-bold mb-4">
@@ -188,10 +209,22 @@ const SampleLotsPage = () => {
               {columns.map((col) => (
                 <div key={col.key} className="flex justify-between">
                   <span className="font-medium">{col.label}:</span>
-                  <span>{selectedRow[col.key]}</span>
+                  <span>
+                    {col.key === "testMethods" && Array.isArray(selectedRow[col.key])
+                      ? selectedRow[col.key].map((method, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-block bg-blue-500 text-white px-2 py-1 rounded-full mr-1"
+                          >
+                            {method}
+                          </span>
+                        ))
+                      : selectedRow[col.key]}
+                  </span>
                 </div>
               ))}
-              {selectedRow.sampleDetails && selectedRow.sampleDetails.length > 0 && (
+
+              {selectedRow.sampleDetails?.length > 0 && (
                 <div className="mt-4">
                   <h3 className="font-medium mb-2">Sample Details</h3>
                   <table className="w-full border-collapse">
@@ -214,6 +247,7 @@ const SampleLotsPage = () => {
                   </table>
                 </div>
               )}
+
               <div className="flex justify-end mt-4">
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Close
@@ -231,7 +265,11 @@ const SampleLotsPage = () => {
                       <label className="font-medium">{col.label}:</label>
                       <Input
                         name={col.key}
-                        value={editRow[col.key]}
+                        value={
+                          col.key === "testMethods" && Array.isArray(editRow[col.key])
+                            ? editRow[col.key].join(", ")
+                            : editRow[col.key]
+                        }
                         onChange={handleChangeEdit}
                       />
                     </div>
@@ -287,10 +325,7 @@ const SampleLotsPage = () => {
                     ))}
                   </tbody>
                 </table>
-                <Button
-                  onClick={addDetailRow}
-                  className="mt-3 bg-green-600 hover:bg-green-700 text-white w-full"
-                >
+                <Button onClick={addDetailRow} className="mt-3 bg-green-600 hover:bg-green-700 text-white w-full">
                   Add Another Row
                 </Button>
               </div>
