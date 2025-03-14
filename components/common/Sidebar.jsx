@@ -20,20 +20,31 @@ const navItems = [
 	},
 	{ name: "Lab Equipments", href: "/lab-equipments" },
 	{
-		name: "Records",
+		name: "Sample Receiving Records",
 		subItems: [
 			{
-				name: "Sample Receiving Records",
-				href: "/records/sample-receiving-records",
+				name: "Add New Job",
+				href: "/jobs/new",
 			},
-			{ name: "Jobs", href: "/records/jobs" },
-			{ name: "Test Certificates", href: "/records/test-certificates" },
+			{ name: "Job Records", href: "/jobs" },
+			// { name: "Test Certificates", href: "/records/test-certificates" },
 		],
 	},
 	{
-		name: "Laboratory Management",
-		subItems: [{ name: "Lab Test", href: "/lab-management/lab-test" }],
+		name: "Sample Prepration & Test Request",
+		subItems: [
+			{
+				name: "Add Request",
+				href: "/requests/new",
+			},
+			{ name: "Request Records", href: "/requests" },
+			// { name: "Test Certificates", href: "/records/test-certificates" },
+		],
 	},
+	// {
+	// 	name: "Laboratory Management",
+	// 	subItems: [{ name: "Lab Test", href: "/lab-management/lab-test" }],
+	// },
 ];
 
 const personalItems = [
