@@ -265,11 +265,7 @@ const SampleLotsPage = () => {
 							)}
 
 							<div className="flex justify-end mt-4">
-								<Button
-									variant="outline"
-									onClick={() => setIsDialogOpen(false)}>
-									Close
-								</Button>
+								<Button onClick={() => setIsDialogOpen(false)}>Close</Button>
 							</div>
 						</div>
 					)}
