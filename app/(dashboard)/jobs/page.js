@@ -9,66 +9,66 @@ import ReusableSampleLotsTable from "@/components/common/ReusableSlotsTable";
 import { getBase64FromUrl } from "@/lib/utils";
 
 const SampleLotsPage = () => {
-	// Updated columns with new keys and labels
+	// Updated columns for the Job Records Table
 	const columns = [
-		{ key: "srNo", label: "S.No" },
 		{ key: "jobId", label: "Job Id" },
 		{ key: "projectName", label: "Project Name" },
 		{ key: "clientName", label: "Client Name" },
-		{ key: "specimenId", label: "Specimen Id" },
-		{ key: "typeOfSample", label: "Type of Sample" },
-		{ key: "testType", label: "Test Type" },
-		{ key: "testMethods", label: "Test Methods" },
-		{ key: "sampleRecievingDate", label: "Sample Recieving Date" },
-		{ key: "testStarted", label: "Test Started" },
-		{ key: "testEnded", label: "Test Ended" },
-		{ key: "testedBy", label: "Tested By" },
-		{ key: "status", label: "Status" },
-		{ key: "remarks", label: "Remarks" },
-		{ key: "discardDate", label: "Discard Date" },
+		{ key: "sampleDate", label: "Sample Date" },
+		{ key: "noItems", label: "No Items" },
+		{ key: "endUser", label: "End User" },
 	];
 
-	// Updated sample data with all new fields and testMethods as an array
+	// Updated sample data with new fields.
+	// "sampleDate" is used in place of sampleRecievingDate,
+	// "noItems" is computed from sampleDetails.length,
+	// and "endUser" is set from the original testedBy field.
 	const [data, setData] = useState([
 		{
-			srNo: "1",
 			jobId: "J101",
 			projectName: "Project Alpha",
 			clientName: "ABC Corp",
-			specimenId: "SP001",
-			typeOfSample: "Blood",
-			testType: "Chemical Analysis",
-			testMethods: ["Method A", "Method C"],
-			sampleRecievingDate: "2024-04-10",
-			testStarted: "2024-04-11",
-			testEnded: "2024-04-12",
-			testedBy: "John Doe",
-			status: "Completed",
-			remarks: "No issues",
-			discardDate: "2024-04-15",
+			sampleDate: "2024-04-10",
+			noItems: 2,
+			endUser: "John Doe",
 			sampleDetails: [
-				{ sampleDescription: "Chemical Analysis", qty: "3", condition: "Good" },
-				{ sampleDescription: "Microbiology Test", qty: "2", condition: "Fair" },
+				{
+					description: "Chemical Analysis",
+					mtcNo: "3456",
+					sampleType: "Liquid",
+					materialType: "Steel",
+					heatNo: "1234",
+					condition: "Good",
+					testMethods: ["ASTM A123", "ASTM B456"],
+				},
+				{
+					description: "Microbiology Test",
+					mtcNo: "3457",
+					sampleType: "Solid",
+					materialType: "Aluminum",
+					heatNo: "5678",
+					condition: "Fair",
+					testMethods: ["ASTM C123", "ASTM D456"],
+				},
 			],
 		},
 		{
-			srNo: "2",
 			jobId: "J102",
 			projectName: "Project Beta",
 			clientName: "XYZ Ltd.",
-			specimenId: "SP002",
-			typeOfSample: "Urine",
-			testType: "Water Quality",
-			testMethods: ["Method B"],
-			sampleRecievingDate: "2024-04-12",
-			testStarted: "2024-04-13",
-			testEnded: "2024-04-14",
-			testedBy: "Jane Smith",
-			status: "Pending",
-			remarks: "Requires rechecking",
-			discardDate: "2024-04-20",
+			sampleDate: "2024-04-12",
+			noItems: 1,
+			endUser: "Jane Smith",
 			sampleDetails: [
-				{ sampleDescription: "Water Quality", qty: "10", condition: "Damaged" },
+				{
+					description: "Water Quality",
+					mtcNo: "3458",
+					sampleType: "Liquid",
+					materialType: "Copper",
+					heatNo: "9876",
+					condition: "Damaged",
+					testMethods: ["ASTM E123", "ASTM F456"],
+				},
 			],
 		},
 	]);
@@ -97,33 +97,27 @@ const SampleLotsPage = () => {
 	};
 
 	const handleDelete = (row) => {
-		setData(data.filter((item) => item.srNo !== row.srNo));
+		setData(data.filter((item) => item.jobId !== row.jobId));
 	};
 
-	// Row-specific Excel download callback
+	// Row-specific Excel download callback remains unchanged except for field names.
 	const handleDownload = async (row) => {
 		try {
 			const dataUrl = await getBase64FromUrl("/logo.png");
 			const base64String = dataUrl.split("base64,")[1];
+			const rightLogoUrl = await getBase64FromUrl("/ias_logo.jpg");
+			const rightLogoBase64String = rightLogoUrl.split("base64,")[1];
 			const payload = {
-				fileName: `Sample_${row.srNo}.xlsx`,
+				fileName: `Sample_${row.jobId}.xlsx`,
 				logoBase64: base64String,
+				rightLogoBase64: rightLogoBase64String,
 				sampleInfo: {
-					srNo: row.srNo,
 					jobId: row.jobId,
 					projectName: row.projectName,
 					clientName: row.clientName,
-					specimenId: row.specimenId,
-					typeOfSample: row.typeOfSample,
-					testType: row.testType,
-					testMethods: row.testMethods,
-					sampleRecievingDate: row.sampleRecievingDate,
-					testStarted: row.testStarted,
-					testEnded: row.testEnded,
-					testedBy: row.testedBy,
-					status: row.status,
-					remarks: row.remarks,
-					discardDate: row.discardDate,
+					sampleDate: row.sampleDate,
+					noItems: row.noItems,
+					endUser: row.endUser,
 				},
 				sampleDetails: row.sampleDetails || [],
 			};
@@ -149,17 +143,10 @@ const SampleLotsPage = () => {
 		}
 	};
 
-	// Handle changes in edit mode; converts testMethods from a comma-separated string to an array
+	// Handle changes in edit mode; update the editRow state
 	const handleChangeEdit = (e) => {
 		const { name, value } = e.target;
-		if (name === "testMethods") {
-			setEditRow({
-				...editRow,
-				testMethods: value.split(",").map((method) => method.trim()),
-			});
-		} else {
-			setEditRow({ ...editRow, [name]: value });
-		}
+		setEditRow({ ...editRow, [name]: value });
 	};
 
 	// Handle changes in sample details rows during edit
@@ -175,7 +162,15 @@ const SampleLotsPage = () => {
 			...editRow,
 			sampleDetails: [
 				...editRow.sampleDetails,
-				{ sampleDescription: "", qty: "", condition: "" },
+				{
+					description: "",
+					mtcNo: "",
+					sampleType: "",
+					materialType: "",
+					heatNo: "",
+					condition: "",
+					testMethods: [],
+				},
 			],
 		});
 	};
@@ -187,8 +182,17 @@ const SampleLotsPage = () => {
 		});
 	};
 
+	// Save edit changes and update noItems based on the sampleDetails array length
 	const handleSaveEdit = () => {
-		setData(data.map((item) => (item.srNo === editRow.srNo ? editRow : item)));
+		const updatedEditRow = {
+			...editRow,
+			noItems: editRow.sampleDetails ? editRow.sampleDetails.length : 0,
+		};
+		setData(
+			data.map((item) =>
+				item.jobId === updatedEditRow.jobId ? updatedEditRow : item
+			)
+		);
 		setIsDialogOpen(false);
 	};
 
@@ -196,7 +200,7 @@ const SampleLotsPage = () => {
 		<div className="p-6 bg-gray-100 min-h-screen">
 			<div className="m-auto w-7xl">
 				<h1 className="text-2xl font-semibold text-gray-800 mb-6">
-					Sample Lots
+					Job Records
 				</h1>
 
 				<ReusableSampleLotsTable
@@ -210,11 +214,11 @@ const SampleLotsPage = () => {
 			</div>
 
 			<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-				<DialogContent className="p-6 max-w-3xl mx-auto">
+				<DialogContent className="p-6 !max-w-3xl mx-auto">
 					<DialogTitle className="text-center text-xl font-bold mb-4">
 						{dialogMode === "preview"
-							? "Preview Sample Lot"
-							: "Edit Sample Lot"}
+							? "Preview Job Record"
+							: "Edit Job Record"}
 					</DialogTitle>
 
 					{dialogMode === "preview" && selectedRow && (
@@ -222,18 +226,7 @@ const SampleLotsPage = () => {
 							{columns.map((col) => (
 								<div key={col.key} className="flex justify-between">
 									<span className="font-medium">{col.label}:</span>
-									<span>
-										{col.key === "testMethods" &&
-										Array.isArray(selectedRow[col.key])
-											? selectedRow[col.key].map((method, idx) => (
-													<span
-														key={idx}
-														className="inline-block bg-blue-500 text-white px-2 py-1 rounded-full mr-1">
-														{method}
-													</span>
-											  ))
-											: selectedRow[col.key]}
-									</span>
+									<span>{selectedRow[col.key]}</span>
 								</div>
 							))}
 
@@ -244,18 +237,26 @@ const SampleLotsPage = () => {
 										<thead className="bg-gray-200">
 											<tr>
 												<th className="p-2 border">Description</th>
-												<th className="p-2 border">Qty</th>
+												<th className="p-2 border">MTC No</th>
+												<th className="p-2 border">Sample Type</th>
+												<th className="p-2 border">Material Type</th>
+												<th className="p-2 border">Heat No</th>
 												<th className="p-2 border">Condition</th>
+												<th className="p-2 border">Test Methods</th>
 											</tr>
 										</thead>
 										<tbody>
 											{selectedRow.sampleDetails.map((detail, index) => (
 												<tr key={index} className="border-b">
-													<td className="p-2 border">
-														{detail.sampleDescription}
-													</td>
-													<td className="p-2 border">{detail.qty}</td>
+													<td className="p-2 border">{detail.description}</td>
+													<td className="p-2 border">{detail.mtcNo}</td>
+													<td className="p-2 border">{detail.sampleType}</td>
+													<td className="p-2 border">{detail.materialType}</td>
+													<td className="p-2 border">{detail.heatNo}</td>
 													<td className="p-2 border">{detail.condition}</td>
+													<td className="p-2 border">
+														{detail.testMethods?.join(", ")}
+													</td>
 												</tr>
 											))}
 										</tbody>
@@ -277,17 +278,12 @@ const SampleLotsPage = () => {
 						<div className="space-y-6">
 							<div className="grid grid-cols-2 gap-4">
 								{columns.map((col) =>
-									col.key !== "srNo" ? (
+									col.key !== "noItems" ? ( // Skip editing noItems manually
 										<div key={col.key} className="flex flex-col">
 											<label className="font-medium">{col.label}:</label>
 											<Input
 												name={col.key}
-												value={
-													col.key === "testMethods" &&
-													Array.isArray(editRow[col.key])
-														? editRow[col.key].join(", ")
-														: editRow[col.key]
-												}
+												value={editRow[col.key]}
 												onChange={handleChangeEdit}
 											/>
 										</div>
@@ -301,8 +297,12 @@ const SampleLotsPage = () => {
 									<thead className="bg-gray-200">
 										<tr>
 											<th className="p-2 border">Description</th>
-											<th className="p-2 border">Qty</th>
+											<th className="p-2 border">MTC No</th>
+											<th className="p-2 border">Sample Type</th>
+											<th className="p-2 border">Material Type</th>
+											<th className="p-2 border">Heat No</th>
 											<th className="p-2 border">Condition</th>
+											<th className="p-2 border">Test Methods</th>
 											<th className="p-2 border">Actions</th>
 										</tr>
 									</thead>
@@ -311,15 +311,36 @@ const SampleLotsPage = () => {
 											<tr key={index} className="border-b">
 												<td className="p-2 border">
 													<Input
-														name="sampleDescription"
-														value={detail.sampleDescription}
+														name="description"
+														value={detail.description}
 														onChange={(e) => handleDetailChange(index, e)}
 													/>
 												</td>
 												<td className="p-2 border">
 													<Input
-														name="qty"
-														value={detail.qty}
+														name="mtcNo"
+														value={detail.mtcNo}
+														onChange={(e) => handleDetailChange(index, e)}
+													/>
+												</td>
+												<td className="p-2 border">
+													<Input
+														name="sampleType"
+														value={detail.sampleType}
+														onChange={(e) => handleDetailChange(index, e)}
+													/>
+												</td>
+												<td className="p-2 border">
+													<Input
+														name="materialType"
+														value={detail.materialType}
+														onChange={(e) => handleDetailChange(index, e)}
+													/>
+												</td>
+												<td className="p-2 border">
+													<Input
+														name="heatNo"
+														value={detail.heatNo}
 														onChange={(e) => handleDetailChange(index, e)}
 													/>
 												</td>
@@ -328,6 +349,24 @@ const SampleLotsPage = () => {
 														name="condition"
 														value={detail.condition}
 														onChange={(e) => handleDetailChange(index, e)}
+													/>
+												</td>
+												<td className="p-2 border">
+													<Input
+														name="testMethods"
+														value={detail.testMethods?.join(", ")}
+														onChange={(e) => {
+															// Convert comma-separated string into an array
+															const updatedValue = e.target.value
+																.split(",")
+																.map((item) => item.trim());
+															handleDetailChange(index, {
+																target: {
+																	name: "testMethods",
+																	value: updatedValue,
+																},
+															});
+														}}
 													/>
 												</td>
 												<td className="p-2 border text-center">

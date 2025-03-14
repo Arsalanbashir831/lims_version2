@@ -5,10 +5,13 @@ import path from "path";
 
 export async function POST(req) {
 	try {
+		// Added rightLogoBase64 and rightImagePath from the request payload
 		const {
 			fileName,
 			imagePath,
 			logoBase64,
+			rightLogoBase64,
+			rightImagePath,
 			sampleInfo,
 			sampleDetails,
 			otherInfo,
@@ -18,12 +21,12 @@ export async function POST(req) {
 		const workbook = new ExcelJS.Workbook();
 		const worksheet = workbook.addWorksheet("Sample Sheet");
 
-		// 2) Attempt to add a logo. Priority:
+		// 2) Attempt to add the left logo. Priority:
 		//    1) If logoBase64 is provided, use that.
 		//    2) Else if imagePath is provided, read from public folder with fs.
 		let logoImageId;
 		if (logoBase64) {
-			// If we have a Base64 string
+			// If we have a Base64 string for left logo
 			const buffer = Buffer.from(logoBase64, "base64");
 			logoImageId = workbook.addImage({ buffer, extension: "png" });
 		} else if (imagePath) {
@@ -38,8 +41,7 @@ export async function POST(req) {
 			}
 		}
 
-		// 3) Insert the logo into the worksheet (if found)
-		// Instead of `if (logoImageId)`, check if it's not undefined or null
+		// 3) Insert the left logo into the worksheet (if found)
 		if (logoImageId !== undefined && logoImageId !== null) {
 			worksheet.addImage(logoImageId, {
 				tl: { col: 0, row: 0 },
@@ -48,7 +50,38 @@ export async function POST(req) {
 			worksheet.getRow(1).height = 80;
 		}
 
-		// 4) Set column widths for professional layout
+		// 4) Attempt to add the right logo. Priority:
+		//    1) If rightLogoBase64 is provided, use that.
+		//    2) Else if rightImagePath is provided, read from public folder with fs.
+		let rightLogoImageId;
+		if (rightLogoBase64) {
+			const buffer = Buffer.from(rightLogoBase64, "base64");
+			rightLogoImageId = workbook.addImage({ buffer, extension: "png" });
+		} else if (rightImagePath) {
+			const absoluteRightLogoPath = path.join(
+				process.cwd(),
+				"public",
+				rightImagePath
+			);
+			if (fs.existsSync(absoluteRightLogoPath)) {
+				const logoBuffer = fs.readFileSync(absoluteRightLogoPath);
+				rightLogoImageId = workbook.addImage({
+					buffer: logoBuffer,
+					extension: "png",
+				});
+			}
+		}
+
+		// 5) Insert the right logo into the worksheet (if found)
+		if (rightLogoImageId !== undefined && rightLogoImageId !== null) {
+			// Place the right logo in the top right. Column F (0-based index: 5)
+			worksheet.addImage(rightLogoImageId, {
+				tl: { col: 5, row: 0 },
+				ext: { width: 100, height: 80 },
+			});
+		}
+
+		// 6) Set column widths for professional layout
 		worksheet.getColumn("A").width = 25;
 		worksheet.getColumn("B").width = 50;
 		worksheet.getColumn("C").width = 20;
@@ -56,8 +89,7 @@ export async function POST(req) {
 		worksheet.getColumn("E").width = 20;
 		worksheet.getColumn("F").width = 20;
 
-		// 5) Create header section with merges, logos, & statements
-
+		// 7) Create header section with merges (without the statement block)
 		worksheet.mergeCells("B1:F1");
 		let headerCell = worksheet.getCell("B1");
 		headerCell.value = "GRIPCO MATERIAL TESTING";
@@ -71,35 +103,8 @@ export async function POST(req) {
 		subHeaderCell.font = { bold: true, size: 12 };
 		subHeaderCell.alignment = { horizontal: "center", vertical: "middle" };
 
-		worksheet.mergeCells("B4:F4");
-		let statementLabel = worksheet.getCell("B4");
-		statementLabel.value = "Statement:";
-		statementLabel.font = { bold: true, size: 12 };
-		statementLabel.alignment = { horizontal: "center" };
-
-		worksheet.mergeCells("B5:F5");
-		let regCell = worksheet.getCell("B5");
-		regCell.value =
-			"Commercial Registration No: 2015253768 (IAS accredited lab reference # TL-1305)";
-		regCell.font = { size: 11 };
-		regCell.alignment = { horizontal: "center" };
-
-		worksheet.mergeCells("B6:F6");
-		let longStatementCell = worksheet.getCell("B6");
-		longStatementCell.value =
-			"All works and services carried out by GLOBAL RESOURCES INSPECTION CONTRACTING COMPANY (GRIPCO Material Testing Saudia) " +
-			"are subjected to and conducted with the standard terms and conditions of GRIPCO Material Testing which are available " +
-			"at the GRIPCO Site Terms and Conditions or upon request. This document may not be reproduced other than in full except " +
-			"with the prior written approval of the issuing laboratory. These results relate only to the item(s) tested/sampling " +
-			"conducted by the organization indicated. No deviations were observed during the testing process.";
-		longStatementCell.font = { size: 10 };
-		longStatementCell.alignment = { horizontal: "center", wrapText: true };
-
-		worksheet.mergeCells("B7:F7");
-		worksheet.mergeCells("B9:F9");
-
-		// 6) Insert Sample Info
-		let currentRow = 11;
+		// 8) Insert Sample Info
+		let currentRow = 4;
 		worksheet.getCell(`A${currentRow}`).value = "Sample Information";
 		worksheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
 		currentRow++;
@@ -126,11 +131,11 @@ export async function POST(req) {
 			currentRow++;
 		}
 
-		// 7) Insert Sample Details
+		// 9) Insert Sample Details
 		currentRow += 2;
 		if (sampleDetails && sampleDetails.length > 0) {
 			const detailKeys = Object.keys(sampleDetails[0]);
-			// Create header row
+			// Create header row for details
 			detailKeys.forEach((hdr, idx) => {
 				let headerCell = worksheet.getCell(currentRow, idx + 1);
 				headerCell.value = hdr;
@@ -149,7 +154,7 @@ export async function POST(req) {
 				};
 			});
 
-			// Data rows
+			// Data rows for sample details
 			sampleDetails.forEach((detail, detailIdx) => {
 				let rowNumber = currentRow + detailIdx + 1;
 				detailKeys.forEach((colKey, colIndex) => {
@@ -166,7 +171,7 @@ export async function POST(req) {
 			currentRow += sampleDetails.length + 1;
 		}
 
-		// 8) Other Sample Information
+		// 10) Insert Other Sample Information
 		currentRow += 2;
 		worksheet.getCell(`A${currentRow}`).value = "Other Sample Information";
 		worksheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
@@ -192,9 +197,9 @@ export async function POST(req) {
 			currentRow++;
 		}
 
-		// 9) Footer
+		// 11) Footer Section
 		currentRow += 2;
-		//  underscores
+		// Underscores
 		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
 		let footerCell1 = worksheet.getCell(`A${currentRow}`);
 		footerCell1.value = "________________________";
@@ -202,7 +207,7 @@ export async function POST(req) {
 		footerCell1.font = { bold: true, size: 10 };
 		currentRow++;
 
-		// LIMS coordinator line
+		// LIMS Coordinator line
 		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
 		let footerCell2 = worksheet.getCell(`A${currentRow}`);
 		footerCell2.value = "LIMS Coordinator on authority of";
@@ -224,7 +229,7 @@ export async function POST(req) {
 		spacingRow.value = "";
 		currentRow++;
 
-		// Another line
+		// Another footer line
 		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
 		let footerCell5 = worksheet.getCell(`A${currentRow}`);
 		footerCell5.value =
@@ -236,7 +241,53 @@ export async function POST(req) {
 		};
 		footerCell5.font = { bold: true, size: 10 };
 
-		// 10) Generate Excel & Return
+		// 12) Append Statement Section at the End with borders
+		currentRow += 2; // additional spacing
+		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+		let newStatementLabel = worksheet.getCell(`A${currentRow}`);
+		newStatementLabel.value = "Statement:";
+		newStatementLabel.font = { bold: true, size: 12 };
+		// Add borders around the statement cell
+		newStatementLabel.border = {
+			top: { style: "thin" },
+			left: { style: "thin" },
+			bottom: { style: "thin" },
+			right: { style: "thin" },
+		};
+		currentRow++;
+
+		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+		let newRegCell = worksheet.getCell(`A${currentRow}`);
+		newRegCell.value =
+			"Commercial Registration No: 2015253768 (IAS accredited lab reference # TL-1305)";
+		newRegCell.font = { size: 11 };
+		newRegCell.border = {
+			top: { style: "thin" },
+			left: { style: "thin" },
+			bottom: { style: "thin" },
+			right: { style: "thin" },
+		};
+		currentRow++;
+
+		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+		let newLongStatementCell = worksheet.getCell(`A${currentRow}`);
+		newLongStatementCell.value =
+			"All works and services carried out by GLOBAL RESOURCES INSPECTION CONTRACTING COMPANY (GRIPCO Material Testing Saudia) " +
+			"are subjected to and conducted with the standard terms and conditions of GRIPCO MATERIAL TESTING which are available " +
+			"at the GRIPCO Site Terms and Conditions or upon request. This document may not be reproduced other than in full except " +
+			"with the prior written approval of the issuing laboratory. These results relate only to the item(s) tested/sampling " +
+			"conducted by the organization indicated. No deviations were observed during the testing process.";
+		newLongStatementCell.font = { size: 10 };
+		newLongStatementCell.alignment = { wrapText: true };
+		newLongStatementCell.border = {
+			top: { style: "thin" },
+			left: { style: "thin" },
+			bottom: { style: "thin" },
+			right: { style: "thin" },
+		};
+		worksheet.getRow(currentRow).height = 60;
+
+		// 13) Generate Excel & Return
 		const buffer = await workbook.xlsx.writeBuffer();
 		const dynamicFileName = fileName ? fileName : "Sample_Data.xlsx";
 

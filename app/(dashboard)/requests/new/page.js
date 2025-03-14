@@ -1,17 +1,12 @@
 "use client";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import SampleLotForm from "@/components/sample-lots/SampleLotForm";
+import SampleRequestForm from "@/components/sample-lots/SampleRequestForm";
 
-const AddSampleLots = () => {
-	const handleFormSubmit = (data) => {
-		console.log("Form submitted:", data);
-		alert("Sample added successfully!");
-	};
-
+const AddRequestPage = () => {
 	return (
 		<div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4 md:p-6">
-			<Card className="w-full max-w-3xl mx-4 bg-white shadow-md p-6">
+			<Card className="w-full max-w-5xl mx-4 bg-white shadow-md p-6">
 				<CardHeader>
 					<h2 className="text-xl font-bold text-gray-800 text-center">
 						GRIPCO Material Testing Lab
@@ -21,11 +16,11 @@ const AddSampleLots = () => {
 					</p>
 				</CardHeader>
 				<CardContent>
-					<SampleLotForm onSubmit={handleFormSubmit} />
+					<SampleRequestForm />
 				</CardContent>
 			</Card>
 		</div>
 	);
 };
 
-export default AddSampleLots;
+export default AddRequestPage;
