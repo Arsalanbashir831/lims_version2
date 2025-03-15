@@ -13,6 +13,7 @@ export function AuthProvider({ children }) {
 		// Listen for auth state changes
 		const unsubscribe = onAuthStateChanged(auth, async (user) => {
 			if (user) {
+				console.log("User is signed in:", user);
 				// Optionally force a token refresh
 				const tokenResult = await getIdTokenResult(user, true);
 				console.log("New ID token:", tokenResult.token);

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { ROUTES } from "@/lib/constants";
 import { toast } from "sonner";
+import Link from "next/link";
 
 export default function Login() {
 	const [email, setEmail] = useState("");
@@ -104,11 +105,11 @@ export default function Login() {
 					<div className="text-center mt-6 text-gray-600 text-sm">
 						<p>
 							Don't have an account?
-							<a
+							<Link
 								href="/auth/register"
 								className="text-green-600 font-medium hover:underline ml-1">
 								Register
-							</a>
+							</Link>
 						</p>
 					</div>
 				</CardContent>
