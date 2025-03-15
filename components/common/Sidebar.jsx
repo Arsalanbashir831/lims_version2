@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ChevronDown, Menu } from "lucide-react";
-// Adjust these imports based on your UI library paths
 import { Sheet, SheetTrigger, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { ROUTES } from "@/lib/constants";
+import { logOut } from "@/lib/auth";
+import { toast } from "sonner";
 
 const navItems = [
 	{ name: "Dashboard", href: "/" },
@@ -22,38 +24,27 @@ const navItems = [
 	{
 		name: "Sample Receiving Records",
 		subItems: [
-			{
-				name: "Add New Job",
-				href: "/jobs/new",
-			},
+			{ name: "Add New Job", href: "/jobs/new" },
 			{ name: "Job Records", href: "/jobs" },
-			// { name: "Test Certificates", href: "/records/test-certificates" },
 		],
 	},
 	{
 		name: "Sample Prepration & Test Request",
 		subItems: [
-			{
-				name: "Add Request",
-				href: "/requests/new",
-			},
+			{ name: "Add Request", href: "/requests/new" },
 			{ name: "Request Records", href: "/requests" },
-			// { name: "Test Certificates", href: "/records/test-certificates" },
 		],
 	},
-	// {
-	// 	name: "Laboratory Management",
-	// 	subItems: [{ name: "Lab Test", href: "/lab-management/lab-test" }],
-	// },
 ];
 
 const personalItems = [
-	{ name: "Profile", href: "/profile" },
-	{ name: "Logout", href: "/logout" },
+	{ name: "Profile", href: ROUTES.USER.PROFILE },
+	{ name: "Logout" },
 ];
 
 export default function Sidebar() {
 	const pathname = usePathname();
+	const router = useRouter();
 	const [expandedSections, setExpandedSections] = useState({});
 	const [open, setOpen] = useState(false);
 
@@ -69,7 +60,18 @@ export default function Sidebar() {
 		setOpen(false);
 	};
 
-	// Common sidebar content for both mobile and desktop
+	const handleLogout = async (e) => {
+		e.preventDefault();
+		const result = await logOut();
+		if (result.error) {
+			toast.error(result.error);
+		} else {
+			toast.success("Successfully logged out!");
+			// Redirect to login page or home
+			router.push("/auth/login");
+		}
+	};
+
 	const sidebarContent = (
 		<div className="flex flex-col w-full bg-gray-900 text-white p-6 shadow-lg h-screen overflow-hidden">
 			<h2 className="text-2xl font-bold mb-6">LIMS Dashboard</h2>
@@ -126,17 +128,27 @@ export default function Sidebar() {
 				)}
 			</nav>
 			<div className="mt-auto flex flex-col gap-2">
-				{personalItems.map((item) => (
-					<Link
-						key={item.href}
-						href={item.href}
-						className={`p-3 rounded-md transition ${
-							pathname === item.href ? "bg-green-600" : "hover:bg-gray-700"
-						}`}
-						onClick={handleLinkClick}>
-						{item.name}
-					</Link>
-				))}
+				{personalItems.map((item) =>
+					item.name === "Logout" ? (
+						<Button
+							variant="ghost"
+							key={item.href}
+							onClick={handleLogout}
+							className={`px-3 py-6 rounded-md transition hover:bg-gray-700 hover:text-white text-left justify-start cursor-pointer`}>
+							{item.name}
+						</Button>
+					) : (
+						<Link
+							key={item.href}
+							href={item.href}
+							className={`p-3 rounded-md transition ${
+								pathname === item.href ? "bg-green-600" : "hover:bg-gray-700"
+							}`}
+							onClick={handleLinkClick}>
+							{item.name}
+						</Link>
+					)
+				)}
 			</div>
 		</div>
 	);
