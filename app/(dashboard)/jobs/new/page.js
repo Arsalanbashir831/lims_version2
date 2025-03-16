@@ -4,11 +4,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import SampleLotForm from "@/components/sample-lots/SampleLotForm";
 
 const AddSampleLots = () => {
-	const handleFormSubmit = (data) => {
-		console.log("Form submitted:", data);
-		alert("Sample added successfully!");
-	};
-
 	return (
 		<div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4 md:p-6">
 			<Card className="w-full max-w-3xl mx-4 bg-white shadow-md p-6">
@@ -21,7 +16,7 @@ const AddSampleLots = () => {
 					</p>
 				</CardHeader>
 				<CardContent>
-					<SampleLotForm onSubmit={handleFormSubmit} />
+					<SampleLotForm />
 				</CardContent>
 			</Card>
 		</div>
