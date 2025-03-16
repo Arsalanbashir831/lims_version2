@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,97 +18,12 @@ import {
 	TableHead,
 	TableCell,
 } from "@/components/ui/table";
-
-// Sample data as provided.
-const sampleJobs = [
-	{
-		jobId: "J101",
-		projectName: "Project Alpha",
-		clientName: "ABC Corp",
-		sampleDate: "2024-04-10",
-		noItems: 2,
-		endUser: "John Doe",
-		sampleDetails: [
-			{
-				description: "Chemical Analysis",
-				mtcNo: "3456",
-				sampleType: "Liquid",
-				materialType: "Steel",
-				heatNo: "1234",
-				condition: "Good",
-				testMethods: ["ASTM A123", "ASTM B456"],
-			},
-			{
-				description: "Microbiology Test",
-				mtcNo: "3457",
-				sampleType: "Solid",
-				materialType: "Aluminum",
-				heatNo: "5678",
-				condition: "Fair",
-				testMethods: ["ASTM C123", "ASTM D456"],
-			},
-		],
-	},
-	{
-		jobId: "J102",
-		projectName: "Project Beta",
-		clientName: "XYZ Ltd.",
-		sampleDate: "2024-04-12",
-		noItems: 1,
-		endUser: "Jane Smith",
-		sampleDetails: [
-			{
-				description: "Water Quality",
-				mtcNo: "3458",
-				sampleType: "Liquid",
-				materialType: "Copper",
-				heatNo: "9876",
-				condition: "Damaged",
-				testMethods: ["ASTM E123", "ASTM F456"],
-			},
-		],
-	},
-];
-
-// Component to handle specimen ID input and badge display.
-function SpecimenIdInput({ specimenIds, setSpecimenIds, maxSpecimenCount }) {
-	const [inputValue, setInputValue] = useState("");
-
-	const handleKeyDown = (e) => {
-		if (e.key === "Enter" && inputValue.trim() !== "") {
-			if (maxSpecimenCount && specimenIds.length >= maxSpecimenCount) {
-				e.preventDefault();
-				return;
-			}
-			setSpecimenIds([...specimenIds, inputValue.trim()]);
-			setInputValue("");
-			e.preventDefault();
-		} else if (e.key === "Backspace" && inputValue === "") {
-			setSpecimenIds(specimenIds.slice(0, -1));
-		}
-	};
-
-	return (
-		<div className="flex flex-wrap border p-2">
-			{specimenIds.map((id, index) => (
-				<span key={index} className="bg-blue-200 px-2 py-1 m-1 rounded text-sm">
-					{id}
-				</span>
-			))}
-			<Input
-				value={inputValue}
-				onChange={(e) => setInputValue(e.target.value)}
-				onKeyDown={handleKeyDown}
-				placeholder="Enter ID and press Enter"
-				className="flex-1 outline-none"
-			/>
-		</div>
-	);
-}
+import { toast } from "sonner";
+import SpecimenIdInput from "@/components/common/SpecimenIdInput";
 
 // Helper function to create a default row.
 const getDefaultRow = () => ({
-	itemNo: "", // index (as string) of the sampleDetails array
+	itemNo: "", // index (as string) corresponding to the sampleDetails array
 	itemDescription: "",
 	testMethod: "",
 	heatNo: "",
@@ -123,26 +38,47 @@ const getDefaultRow = () => ({
 });
 
 function SampleRequestForm() {
-	// State for job selection and sample item rows.
+	// States for jobs, selected job, job ID, and form rows.
+	const [jobs, setJobs] = useState([]);
 	const [selectedJobId, setSelectedJobId] = useState("");
 	const [selectedJob, setSelectedJob] = useState(null);
-	// Initialize with one default row.
 	const [rows, setRows] = useState([getDefaultRow()]);
+	const [loading, setLoading] = useState(false);
 
-	// When a job is selected, set the job data and reset rows.
+	// Fetch jobs from the API endpoint when the component mounts.
+	useEffect(() => {
+		const fetchJobs = async () => {
+			try {
+				const res = await fetch("/api/jobs/");
+				const data = await res.json();
+				if (data.success) {
+					setJobs(data.jobs);
+				} else {
+					toast.error(data.error || "Failed to fetch jobs");
+				}
+			} catch (err) {
+				console.error("Failed to fetch jobs:", err);
+				toast.error("Failed to fetch jobs");
+			}
+		};
+
+		fetchJobs();
+	}, []);
+
+	// When a job is selected, update selectedJob and reset rows.
 	const handleJobSelect = (value) => {
 		setSelectedJobId(value);
-		const job = sampleJobs.find((j) => j.jobId === value);
+		const job = jobs.find((j) => j.id === value);
 		setSelectedJob(job);
 		setRows([getDefaultRow()]);
 	};
 
-	// Add a new row.
+	// Add a new testing item row.
 	const handleAddRow = () => {
 		setRows([...rows, getDefaultRow()]);
 	};
 
-	// Remove a row (only if more than one row exists).
+	// Remove a row if more than one row exists.
 	const handleRemoveRow = (index) => {
 		if (rows.length > 1) {
 			const newRows = [...rows];
@@ -151,20 +87,23 @@ function SampleRequestForm() {
 		}
 	};
 
-	// Update a row field. If "itemNo" changes, auto-fill description, heatNo, and test methods.
+	// Update a row field. For "itemNo" selection, auto-fill details from job's sampleDetails.
 	const handleRowChange = (index, field, value) => {
 		const newRows = [...rows];
 		newRows[index][field] = value;
 
 		if (field === "itemNo" && selectedJob) {
-			const sampleItem = selectedJob.sampleDetails.find(
-				(_, idx) => String(idx) === value
-			);
+			const sampleDetails = selectedJob.sampleDetails || [];
+			// Find the sample item using the provided index.
+			const sampleItem = sampleDetails.find((_, idx) => String(idx) === value);
 			if (sampleItem) {
 				newRows[index].itemDescription = sampleItem.description;
 				newRows[index].heatNo = sampleItem.heatNo;
-				newRows[index].availableTestMethods = sampleItem.testMethods;
-				newRows[index].testMethod = ""; // reset test method selection
+				// Convert testMethods from objects to an array of strings.
+				newRows[index].availableTestMethods = sampleItem.testMethods.map(
+					(method) => method.test_name
+				);
+				newRows[index].testMethod = "";
 			} else {
 				newRows[index].itemDescription = "";
 				newRows[index].heatNo = "";
@@ -181,11 +120,32 @@ function SampleRequestForm() {
 		setRows(newRows);
 	};
 
-	// For demonstration, log the form data on submission.
-	const handleSubmit = (e) => {
+	// Submit the testing request.
+	const handleSubmit = async (e) => {
 		e.preventDefault();
-		console.log("Form Data", { selectedJob, rows });
-		// Process or send the data as needed.
+		setLoading(true);
+		// Send only the jobId (extracted from selectedJob.sample.jobId) and rows.
+		const payload = { jobId: selectedJob?.sample?.jobId, rows };
+		try {
+			const res = await fetch("/api/testing-requests/new", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			});
+			const result = await res.json();
+			if (result.success) {
+				console.log("Testing request submitted with ID:", result.requestId);
+				toast.success("Request submitted successfully");
+				setRows([getDefaultRow()]);
+			} else {
+				console.error("Error submitting testing request:", result.error);
+				toast.error(result.error || "Failed to submit request");
+			}
+		} catch (err) {
+			console.error("Submission error:", err);
+			toast.error("Failed to submit request");
+		}
+		setLoading(false);
 	};
 
 	return (
@@ -199,9 +159,9 @@ function SampleRequestForm() {
 						<SelectValue placeholder="Select Job" />
 					</SelectTrigger>
 					<SelectContent>
-						{sampleJobs.map((job) => (
-							<SelectItem key={job.jobId} value={job.jobId}>
-								{job.jobId} - {job.projectName}
+						{jobs.map((job) => (
+							<SelectItem key={job.id} value={job.id}>
+								{job.sample.jobId} - {job.sample.projectName}
 							</SelectItem>
 						))}
 					</SelectContent>
@@ -244,9 +204,9 @@ function SampleRequestForm() {
 													<SelectValue placeholder="Select Item" />
 												</SelectTrigger>
 												<SelectContent>
-													{selectedJob?.sampleDetails.map((item, idx) => (
+													{selectedJob?.sampleDetails?.map((item, idx) => (
 														<SelectItem key={idx} value={String(idx)}>
-															{`Item ${idx + 1}`}
+															{item.itemNo || `Item ${idx + 1}`}
 														</SelectItem>
 													))}
 												</SelectContent>
@@ -390,7 +350,9 @@ function SampleRequestForm() {
 			)}
 
 			<div className="mt-4">
-				<Button type="submit">Submit Form</Button>
+				<Button type="submit" disabled={loading}>
+					{loading ? "Submitting..." : "Submit Form"}
+				</Button>
 			</div>
 		</form>
 	);

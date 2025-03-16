@@ -1,12 +1,32 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
+	Table,
+	TableHeader,
+	TableBody,
+	TableRow,
+	TableHead,
+	TableCell,
+} from "@/components/ui/table";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import ReusableSampleLotsTable from "@/components/common/ReusableSlotsTable";
-import { Eye, Pencil, Trash, Download } from "lucide-react";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
+import SpecimenIdInput from "@/components/common/SpecimenIdInput";
 
+// Define the table columns for the main list.
 const columns = [
 	{ key: "jobAssigned", label: "Job Assigned #" },
 	{ key: "requestNumber", label: "Request #" },
@@ -19,160 +39,219 @@ const columns = [
 	{ key: "remarks", label: "Remarks" },
 ];
 
-const initialSampleRequests = [
-	{
-		jobAssigned: "J101",
-		requestNumber: "REQ001",
-		requestDate: "2024-04-11",
-		client: "ABC Corp",
-		project: "Project Alpha",
-		totalSamples: 5,
-		plannedTestDate: "2024-04-15",
-		requestBy: "John Doe",
-		remarks: "Urgent",
-		sampleDetails: [
-			{
-				description: "Chemical Analysis",
-				mtcNo: "3456",
-				sampleType: "Liquid",
-				materialType: "Steel",
-				heatNo: "1234",
-				condition: "Good",
-				testMethods: ["ASTM A123", "ASTM B456"],
-			},
-			{
-				description: "Microbiology Test",
-				mtcNo: "3457",
-				sampleType: "Solid",
-				materialType: "Aluminum",
-				heatNo: "5678",
-				condition: "Fair",
-				testMethods: ["ASTM C123", "ASTM D456"],
-			},
-		],
-	},
-	{
-		jobAssigned: "J102",
-		requestNumber: "REQ002",
-		requestDate: "2024-04-12",
-		client: "XYZ Ltd.",
-		project: "Project Beta",
-		totalSamples: 2,
-		plannedTestDate: "2024-04-18",
-		requestBy: "Jane Smith",
-		remarks: "",
-		sampleDetails: [
-			{
-				description: "Chemical Analysis",
-				mtcNo: "3456",
-				sampleType: "Liquid",
-				materialType: "Steel",
-				heatNo: "1234",
-				condition: "Good",
-				testMethods: ["ASTM A123", "ASTM B456"],
-			},
-		],
-	},
-];
+// Helper function to create a default row.
+const getDefaultRow = () => ({
+	itemNo: "", // index (as string) corresponding to a sample detail item
+	itemDescription: "",
+	testMethod: "",
+	heatNo: "",
+	dimensionSpec: "",
+	noOfSamples: "",
+	noOfSpecimen: "",
+	specimenIds: [],
+	plannedTestDate: "",
+	requestBy: "",
+	remarks: "",
+	availableTestMethods: [],
+});
 
 function SubmittedRequestsPage() {
-	// State for main data and modal management.
-	const [data, setData] = useState(initialSampleRequests);
+	// data state holds the flattened testing request objects for the main table.
+	const [data, setData] = useState([]);
+	// The raw testing request object for preview/edit is stored here.
 	const [selectedRow, setSelectedRow] = useState(null);
 	const [dialogMode, setDialogMode] = useState("preview");
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
+	// editRow holds the full testing request object for editing.
 	const [editRow, setEditRow] = useState(null);
+	// Also maintain jobs so that we can look up job details if needed.
+	const [jobs, setJobs] = useState([]);
 
-	// Preview: Open dialog in preview mode.
+	// Fetch jobs on mount.
+	useEffect(() => {
+		const fetchJobs = async () => {
+			try {
+				const res = await fetch("/api/jobs/");
+				const data = await res.json();
+				if (data.success) {
+					setJobs(data.jobs);
+				} else {
+					toast.error(data.error || "Failed to fetch jobs");
+				}
+			} catch (err) {
+				console.error("Failed to fetch jobs:", err);
+				toast.error("Failed to fetch jobs");
+			}
+		};
+		fetchJobs();
+	}, []);
+
+	// Fetch and map testing requests on mount.
+	useEffect(() => {
+		const fetchTestingRequests = async () => {
+			try {
+				const res = await fetch("/api/testing-requests/");
+				const result = await res.json();
+				if (result.success) {
+					const mappedData = result.testingRequests.map((item) => {
+						const totalSamples = item.rows.reduce(
+							(sum, r) => sum + (Number(r.noOfSamples) || 0),
+							0
+						);
+						const requestDate = new Date(item.createdAt).toLocaleDateString();
+						const plannedTestDate =
+							item.rows.length > 0 ? item.rows[0].plannedTestDate : "";
+						return {
+							id: item.id,
+							jobAssigned: item.jobId,
+							requestNumber: item.requestId,
+							requestDate,
+							client: item.clientName,
+							project: item.projectName,
+							totalSamples,
+							plannedTestDate,
+							requestBy: item.rows[0]?.requestBy || "",
+							remarks: item.rows[0]?.remarks || "",
+							raw: item, // store full object for preview/edit
+						};
+					});
+					setData(mappedData);
+				} else {
+					console.error("Error fetching testing requests:", result.error);
+				}
+			} catch (error) {
+				console.error("Error fetching testing requests:", error);
+			}
+		};
+		fetchTestingRequests();
+	}, []);
+
+	// Helper: Look up a job from our jobs state based on jobId.
+	const getJobById = (jobId) => {
+		return jobs.find((job) => job.sample?.jobId === jobId);
+	};
+
+	// Preview mode handler.
 	const handlePreview = (row) => {
-		setSelectedRow(row);
+		// Attach job details to the raw object.
+		const job = getJobById(row.raw.jobId);
+		setSelectedRow({ ...row.raw, testingJob: job });
 		setDialogMode("preview");
 		setIsDialogOpen(true);
 	};
 
-	// Edit: Clone the row for editing.
+	// Edit mode handler.
 	const handleEdit = (row) => {
-		setSelectedRow(row);
-		// Create a shallow clone including sampleDetails
-		setEditRow({
-			...row,
-			sampleDetails: row.sampleDetails ? [...row.sampleDetails] : [],
-		});
+		const job = getJobById(row.raw.jobId);
+		setSelectedRow({ ...row.raw, testingJob: job });
+		setEditRow({ ...row.raw, testingJob: job });
 		setDialogMode("edit");
 		setIsDialogOpen(true);
 	};
 
-	// Delete: Remove the row by filtering out based on unique requestNumber.
-	const handleDelete = (row) => {
-		setData(data.filter((item) => item.requestNumber !== row.requestNumber));
+	// Delete handler.
+	const handleDelete = async (row) => {
+		try {
+			const res = await fetch(`/api/testing-requests/${row.id}`, {
+				method: "DELETE",
+			});
+			const result = await res.json();
+			if (result.success) {
+				setData(data.filter((item) => item.id !== row.id));
+			} else {
+				console.error("Error deleting testing request:", result.error);
+			}
+		} catch (error) {
+			console.error("Error deleting testing request:", error);
+		}
 	};
 
-	// Download: Stub callback; replace with your own logic.
+	// Download handler (stub).
 	const handleDownload = (row) => {
 		console.log("Download:", row);
 	};
 
-	// Handle changes for the main row fields in edit mode.
-	const handleChangeEdit = (e) => {
-		const { name, value } = e.target;
-		setEditRow({ ...editRow, [name]: value });
+	// --- Edit Modal Functions for Rows ---
+	const handleRowChange = (index, field, value) => {
+		const newRows = [...editRow.rows];
+		newRows[index][field] = value;
+		if (field === "itemNo" && editRow.testingJob) {
+			const sampleDetails = editRow.testingJob.sampleDetails || [];
+			const sampleItem = sampleDetails.find((_, idx) => String(idx) === value);
+			if (sampleItem) {
+				newRows[index].itemDescription = sampleItem.description;
+				newRows[index].heatNo = sampleItem.heatNo;
+				newRows[index].availableTestMethods = sampleItem.testMethods.map(
+					(method) => method.test_name
+				);
+				newRows[index].testMethod = "";
+			} else {
+				newRows[index].itemDescription = "";
+				newRows[index].heatNo = "";
+				newRows[index].availableTestMethods = [];
+				newRows[index].testMethod = "";
+			}
+		}
+		setEditRow({ ...editRow, rows: newRows });
 	};
 
-	// Handle changes in sample details for edit mode.
-	const handleDetailChange = (index, e) => {
-		const { name, value } = e.target;
-		const updatedDetails = [...editRow.sampleDetails];
-		// For testMethods, convert comma-separated string into an array.
-		updatedDetails[index] = {
-			...updatedDetails[index],
-			[name]:
-				name === "testMethods"
-					? value.split(",").map((item) => item.trim())
-					: value,
-		};
-		setEditRow({ ...editRow, sampleDetails: updatedDetails });
+	const handleSpecimenIdsChange = (index, newSpecimenIds) => {
+		const newRows = [...editRow.rows];
+		newRows[index].specimenIds = newSpecimenIds;
+		setEditRow({ ...editRow, rows: newRows });
 	};
 
-	// Add a new empty sample detail row.
-	const addDetailRow = () => {
-		setEditRow({
-			...editRow,
-			sampleDetails: [
-				...editRow.sampleDetails,
-				{
-					description: "",
-					mtcNo: "",
-					sampleType: "",
-					materialType: "",
-					heatNo: "",
-					condition: "",
-					testMethods: [],
-				},
-			],
-		});
+	const handleAddRow = () => {
+		setEditRow({ ...editRow, rows: [...editRow.rows, getDefaultRow()] });
 	};
 
-	// Remove a sample detail row.
-	const removeDetailRow = (index) => {
-		setEditRow({
-			...editRow,
-			sampleDetails: editRow.sampleDetails.filter((_, i) => i !== index),
-		});
+	const handleRemoveRow = (index) => {
+		if (editRow.rows.length > 1) {
+			const newRows = [...editRow.rows];
+			newRows.splice(index, 1);
+			setEditRow({ ...editRow, rows: newRows });
+		}
 	};
 
-	// Save the edit changes to the data.
-	const handleSaveEdit = () => {
-		const updatedRow = editRow;
-		setData(
-			data.map((item) =>
-				item.requestNumber === updatedRow.requestNumber ? updatedRow : item
-			)
-		);
-		setIsDialogOpen(false);
+	// Save updated testing request.
+	const handleSaveEdit = async () => {
+		try {
+			const res = await fetch(`/api/testing-requests/${editRow.id}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(editRow),
+			});
+			const result = await res.json();
+			if (result.success) {
+				setData(
+					data.map((item) =>
+						item.id === editRow.id ? { ...item, raw: editRow } : item
+					)
+				);
+				setIsDialogOpen(false);
+				toast.success("Testing request updated successfully");
+			} else {
+				console.error("Error updating testing request:", result.error);
+			}
+		} catch (error) {
+			console.error("Error updating testing request:", error);
+		}
+	};
+
+	// --- Render Helper for Test Methods ---
+	const renderTestMethods = (testMethods) => {
+		if (!testMethods) return "";
+		if (Array.isArray(testMethods)) {
+			if (typeof testMethods[0] === "object") {
+				return testMethods.map((tm) => tm.test_name).join(", ");
+			}
+			return testMethods.join(", ");
+		}
+		return testMethods;
 	};
 
 	return (
-		<div className="container mx-auto p-6">
+		<div className="container mx-auto p-4 sm:p-6 lg:p-8">
 			<h1 className="text-2xl font-bold mb-4">
 				Sample and Testing Request Database
 			</h1>
@@ -186,160 +265,334 @@ function SubmittedRequestsPage() {
 			/>
 
 			<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-				<DialogContent className="p-6 !max-w-3xl mx-auto">
+				<DialogContent className="p-4 sm:p-6 lg:p-8 !max-w-5xl mx-auto">
 					<DialogTitle className="text-center text-xl font-bold mb-4">
 						{dialogMode === "preview" ? "Preview Request" : "Edit Request"}
 					</DialogTitle>
 
+					{/* Preview Modal */}
 					{dialogMode === "preview" && selectedRow && (
-						<div className="space-y-4">
-							{columns.map((col) => (
-								<div key={col.key} className="flex justify-between">
-									<span className="font-medium">{col.label}:</span>
-									<span>{selectedRow[col.key]}</span>
-								</div>
-							))}
-							{selectedRow.sampleDetails &&
-								selectedRow.sampleDetails.length > 0 && (
-									<div className="mt-4">
-										<h3 className="font-medium mb-2">Sample Details</h3>
-										<table className="w-full border-collapse">
-											<thead className="bg-gray-200">
-												<tr>
-													<th className="p-2 border">Description</th>
-													<th className="p-2 border">MTC No</th>
-													<th className="p-2 border">Sample Type</th>
-													<th className="p-2 border">Material Type</th>
-													<th className="p-2 border">Heat No</th>
-													<th className="p-2 border">Condition</th>
-													<th className="p-2 border">Test Methods</th>
+						<div className="space-y-6">
+							<h3 className="text-xl font-bold mb-2">Main Request Details</h3>
+							<div className="overflow-x-auto">
+								<table className="w-full border-collapse">
+									<tbody>
+										<tr className="border-b">
+											<td className="p-2 font-medium">Job Assigned</td>
+											<td className="p-2">{selectedRow.jobId}</td>
+										</tr>
+										<tr className="border-b">
+											<td className="p-2 font-medium">Request #</td>
+											<td className="p-2">{selectedRow.requestId}</td>
+										</tr>
+										<tr className="border-b">
+											<td className="p-2 font-medium">Request Date</td>
+											<td className="p-2">
+												{new Date(selectedRow.createdAt).toLocaleDateString()}
+											</td>
+										</tr>
+										<tr className="border-b">
+											<td className="p-2 font-medium">Client</td>
+											<td className="p-2">{selectedRow.clientName}</td>
+										</tr>
+										<tr className="border-b">
+											<td className="p-2 font-medium">Project</td>
+											<td className="p-2">{selectedRow.projectName}</td>
+										</tr>
+										<tr className="border-b">
+											<td className="p-2 font-medium">Total Samples</td>
+											<td className="p-2">
+												{selectedRow.rows.reduce(
+													(sum, r) => sum + (Number(r.noOfSamples) || 0),
+													0
+												)}
+											</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+
+							{selectedRow.rows && selectedRow.rows.length > 0 && (
+								<div className="mt-6 overflow-x-auto">
+									<h3 className="text-xl font-bold mb-2">Sample Details</h3>
+									<table className="w-full border-collapse">
+										<thead className="bg-gray-200">
+											<tr>
+												<TableHead className="p-2 border">
+													Description
+												</TableHead>
+												<TableHead className="p-2 border">MTC No</TableHead>
+												<TableHead className="p-2 border">
+													Sample Type
+												</TableHead>
+												<TableHead className="p-2 border">
+													Material Type
+												</TableHead>
+												<TableHead className="p-2 border">Heat No</TableHead>
+												<TableHead className="p-2 border">Condition</TableHead>
+												<TableHead className="p-2 border">
+													Test Methods
+												</TableHead>
+												<TableHead className="p-2 border">
+													Planned Test Date
+												</TableHead>
+												<TableHead className="p-2 border">Request By</TableHead>
+												<TableHead className="p-2 border">Remarks</TableHead>
+											</tr>
+										</thead>
+										<tbody>
+											{selectedRow.rows.map((detail, index) => (
+												<tr key={index} className="border-b">
+													<td className="p-2 border">
+														{detail.itemDescription}
+													</td>
+													<td className="p-2 border">{detail.mtcNo}</td>
+													<td className="p-2 border">{detail.sampleType}</td>
+													<td className="p-2 border">{detail.materialType}</td>
+													<td className="p-2 border">{detail.heatNo}</td>
+													<td className="p-2 border">{detail.condition}</td>
+													<td className="p-2 border">
+														{renderTestMethods(detail.testMethods)}
+													</td>
+													<td className="p-2 border">
+														{detail.plannedTestDate || ""}
+													</td>
+													<td className="p-2 border">
+														{detail.requestBy || ""}
+													</td>
+													<td className="p-2 border">{detail.remarks || ""}</td>
 												</tr>
-											</thead>
-											<tbody>
-												{selectedRow.sampleDetails.map((detail, index) => (
-													<tr key={index} className="border-b">
-														<td className="p-2 border">{detail.description}</td>
-														<td className="p-2 border">{detail.mtcNo}</td>
-														<td className="p-2 border">{detail.sampleType}</td>
-														<td className="p-2 border">
-															{detail.materialType}
-														</td>
-														<td className="p-2 border">{detail.heatNo}</td>
-														<td className="p-2 border">{detail.condition}</td>
-														<td className="p-2 border">
-															{detail.testMethods &&
-																detail.testMethods.join(", ")}
-														</td>
-													</tr>
-												))}
-											</tbody>
-										</table>
-									</div>
-								)}
+											))}
+										</tbody>
+									</table>
+								</div>
+							)}
 							<div className="flex justify-end mt-4">
 								<Button onClick={() => setIsDialogOpen(false)}>Close</Button>
 							</div>
 						</div>
 					)}
 
+					{/* Edit Modal */}
 					{dialogMode === "edit" && editRow && (
 						<div className="space-y-6">
-							<div className="grid grid-cols-2 gap-4">
-								{columns.map((col) => (
-									<div key={col.key} className="flex flex-col">
-										<label className="font-medium">{col.label}:</label>
-										<Input
-											name={col.key}
-											value={editRow[col.key]}
-											onChange={handleChangeEdit}
-										/>
-									</div>
-								))}
+							{/* Job Info (read-only) */}
+							<div className="mb-4">
+								<Label className="block font-medium mb-1">Job ID:</Label>
+								<Input value={editRow.jobId} readOnly className="bg-gray-100" />
 							</div>
-							<div>
-								<h3 className="font-medium mb-2">Sample Details</h3>
-								<table className="w-full border-collapse">
-									<thead className="bg-gray-200">
-										<tr>
-											<th className="p-2 border">Description</th>
-											<th className="p-2 border">MTC No</th>
-											<th className="p-2 border">Sample Type</th>
-											<th className="p-2 border">Material Type</th>
-											<th className="p-2 border">Heat No</th>
-											<th className="p-2 border">Condition</th>
-											<th className="p-2 border">Test Methods</th>
-											<th className="p-2 border">Actions</th>
-										</tr>
-									</thead>
-									<tbody>
-										{editRow.sampleDetails &&
-											editRow.sampleDetails.map((detail, index) => (
-												<tr key={index} className="border-b">
-													<td className="p-2 border">
-														<Input
-															name="description"
-															value={detail.description}
-															onChange={(e) => handleDetailChange(index, e)}
-														/>
-													</td>
-													<td className="p-2 border">
-														<Input
-															name="mtcNo"
-															value={detail.mtcNo}
-															onChange={(e) => handleDetailChange(index, e)}
-														/>
-													</td>
-													<td className="p-2 border">
-														<Input
-															name="sampleType"
-															value={detail.sampleType}
-															onChange={(e) => handleDetailChange(index, e)}
-														/>
-													</td>
-													<td className="p-2 border">
-														<Input
-															name="materialType"
-															value={detail.materialType}
-															onChange={(e) => handleDetailChange(index, e)}
-														/>
-													</td>
-													<td className="p-2 border">
-														<Input
-															name="heatNo"
-															value={detail.heatNo}
-															onChange={(e) => handleDetailChange(index, e)}
-														/>
-													</td>
-													<td className="p-2 border">
-														<Input
-															name="condition"
-															value={detail.condition}
-															onChange={(e) => handleDetailChange(index, e)}
-														/>
-													</td>
-													<td className="p-2 border">
-														<Input
-															name="testMethods"
-															value={detail.testMethods.join(", ")}
-															onChange={(e) => handleDetailChange(index, e)}
-														/>
-													</td>
-													<td className="p-2 border text-center">
-														<Button
-															variant="outline"
-															onClick={() => removeDetailRow(index)}
-															className="bg-red-500 text-white hover:bg-red-600">
-															Delete
-														</Button>
-													</td>
-												</tr>
-											))}
-									</tbody>
-								</table>
-								<Button
-									onClick={addDetailRow}
-									className="mt-3 bg-green-600 hover:bg-green-700 text-white w-full">
-									Add Another Row
+							<div className="mb-4">
+								<Label className="block font-medium mb-1">Project Name:</Label>
+								<Input
+									value={editRow.projectName}
+									readOnly
+									className="bg-gray-100"
+								/>
+							</div>
+
+							{/* Editable Rows */}
+							{editRow.rows && editRow.rows.length > 0 && (
+								<ScrollArea className="w-full max-w-4xl mx-auto">
+									<div className="overflow-x-auto mb-4">
+										<Table>
+											<TableHeader>
+												<TableRow>
+													<TableHead>Item No.</TableHead>
+													<TableHead>Item Description</TableHead>
+													<TableHead>Test Method</TableHead>
+													<TableHead>Heat #</TableHead>
+													<TableHead>
+														Dimension/Spec &amp; Specimen Location
+													</TableHead>
+													<TableHead>No of Samples</TableHead>
+													<TableHead>No of Specimen</TableHead>
+													<TableHead>Assign Specimen ID</TableHead>
+													<TableHead>Planned Test Date</TableHead>
+													<TableHead>Request By</TableHead>
+													<TableHead>Remarks</TableHead>
+													<TableHead>Actions</TableHead>
+												</TableRow>
+											</TableHeader>
+											<TableBody>
+												{editRow.rows.map((row, index) => (
+													<TableRow key={index}>
+														{/* Item No. Selection */}
+														<TableCell>
+															<Select
+																value={row.itemNo}
+																onValueChange={(value) =>
+																	handleRowChange(index, "itemNo", value)
+																}>
+																<SelectTrigger className="w-full">
+																	<SelectValue placeholder="Select Item" />
+																</SelectTrigger>
+																<SelectContent>
+																	{editRow.testingJob?.sampleDetails?.map(
+																		(item, idx) => (
+																			<SelectItem key={idx} value={String(idx)}>
+																				{item.itemNo || `Item ${idx + 1}`}
+																			</SelectItem>
+																		)
+																	)}
+																</SelectContent>
+															</Select>
+														</TableCell>
+														{/* Item Description (read-only) */}
+														<TableCell>
+															<Input
+																value={row.itemDescription}
+																readOnly
+																className="bg-gray-100"
+															/>
+														</TableCell>
+														{/* Test Method dropdown */}
+														<TableCell>
+															<Select
+																value={row.testMethod}
+																onValueChange={(value) =>
+																	handleRowChange(index, "testMethod", value)
+																}
+																disabled={
+																	!row.availableTestMethods ||
+																	row.availableTestMethods.length === 0
+																}>
+																<SelectTrigger className="w-full">
+																	<SelectValue placeholder="Select Test Method" />
+																</SelectTrigger>
+																<SelectContent>
+																	{row.availableTestMethods?.map(
+																		(method, idx) => (
+																			<SelectItem key={idx} value={method}>
+																				{method}
+																			</SelectItem>
+																		)
+																	)}
+																</SelectContent>
+															</Select>
+														</TableCell>
+														{/* Heat # (read-only) */}
+														<TableCell>
+															<Input
+																value={row.heatNo}
+																readOnly
+																className="bg-gray-100"
+															/>
+														</TableCell>
+														{/* Dimension/Spec & Specimen Location */}
+														<TableCell>
+															<Input
+																value={row.dimensionSpec}
+																onChange={(e) =>
+																	handleRowChange(
+																		index,
+																		"dimensionSpec",
+																		e.target.value
+																	)
+																}
+															/>
+														</TableCell>
+														{/* No of Samples */}
+														<TableCell>
+															<Input
+																type="number"
+																value={row.noOfSamples}
+																onChange={(e) =>
+																	handleRowChange(
+																		index,
+																		"noOfSamples",
+																		e.target.value
+																	)
+																}
+															/>
+														</TableCell>
+														{/* No of Specimen */}
+														<TableCell>
+															<Input
+																type="number"
+																value={row.noOfSpecimen}
+																onChange={(e) =>
+																	handleRowChange(
+																		index,
+																		"noOfSpecimen",
+																		e.target.value
+																	)
+																}
+															/>
+														</TableCell>
+														{/* Assign Specimen ID (disabled) */}
+														<TableCell>
+															<SpecimenIdInput
+																specimenIds={row.specimenIds}
+																setSpecimenIds={(ids) =>
+																	handleSpecimenIdsChange(index, ids)
+																}
+																maxSpecimenCount={
+																	parseInt(row.noOfSpecimen, 10) || 0
+																}
+																disabled={true}
+															/>
+														</TableCell>
+														{/* Planned Test Date */}
+														<TableCell>
+															<Input
+																type="date"
+																value={row.plannedTestDate}
+																onChange={(e) =>
+																	handleRowChange(
+																		index,
+																		"plannedTestDate",
+																		e.target.value
+																	)
+																}
+															/>
+														</TableCell>
+														{/* Request By */}
+														<TableCell>
+															<Input
+																value={row.requestBy}
+																onChange={(e) =>
+																	handleRowChange(
+																		index,
+																		"requestBy",
+																		e.target.value
+																	)
+																}
+															/>
+														</TableCell>
+														{/* Remarks */}
+														<TableCell>
+															<Textarea
+																value={row.remarks}
+																onChange={(e) =>
+																	handleRowChange(
+																		index,
+																		"remarks",
+																		e.target.value
+																	)
+																}
+															/>
+														</TableCell>
+														{/* Actions */}
+														<TableCell>
+															<Button
+																type="button"
+																onClick={() => handleRemoveRow(index)}
+																disabled={editRow.rows.length === 1}
+																variant="destructive">
+																Remove
+															</Button>
+														</TableCell>
+													</TableRow>
+												))}
+											</TableBody>
+										</Table>
+									</div>
+									<ScrollBar orientation="horizontal" />
+								</ScrollArea>
+							)}
+							<div className="mb-4">
+								<Button type="button" onClick={handleAddRow} className="w-full">
+									Add Row
 								</Button>
 							</div>
 							<div className="flex justify-end mt-4 gap-2">
