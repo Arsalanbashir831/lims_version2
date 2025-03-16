@@ -203,8 +203,8 @@ const SampleLotsPage = () => {
 	};
 
 	return (
-		<div className="p-6 bg-gray-100 min-h-screen">
-			<div className="m-auto w-7xl">
+		<div className="p-6   bg-gray-100 min-h-screen">
+			<div className="m-auto w-5xl">
 				<h1 className="text-2xl font-semibold text-gray-800 mb-6">
 					Job Records
 				</h1>

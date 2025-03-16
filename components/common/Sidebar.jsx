@@ -81,7 +81,8 @@ export default function Sidebar() {
 						<div key={item.name} className="relative">
 							<button
 								onClick={() => toggleSection(item.name)}
-								className="flex justify-between items-center w-full p-3 rounded-md text-left transition-all duration-300 hover:bg-gray-800">
+								className="flex justify-between items-center w-full p-3 rounded-md text-left transition-all duration-300 hover:bg-gray-800"
+							>
 								{item.name}
 								<ChevronDown
 									className={`w-4 h-4 transition-transform duration-300 ${
@@ -96,7 +97,8 @@ export default function Sidebar() {
 									opacity: expandedSections[item.name] ? 1 : 0,
 								}}
 								transition={{ duration: 0.3, ease: "easeInOut" }}
-								className="overflow-hidden">
+								className="overflow-hidden"
+							>
 								<div className="ml-5 flex flex-col gap-2 mt-1">
 									{item.subItems.map((sub) => (
 										<Link
@@ -107,7 +109,8 @@ export default function Sidebar() {
 													? "bg-green-600"
 													: "hover:bg-gray-700"
 											}`}
-											onClick={handleLinkClick}>
+											onClick={handleLinkClick}
+										>
 											{sub.name}
 										</Link>
 									))}
@@ -121,7 +124,8 @@ export default function Sidebar() {
 							className={`p-3 rounded-md transition ${
 								pathname === item.href ? "bg-green-600" : "hover:bg-gray-700"
 							}`}
-							onClick={handleLinkClick}>
+							onClick={handleLinkClick}
+						>
 							{item.name}
 						</Link>
 					)
@@ -132,9 +136,10 @@ export default function Sidebar() {
 					item.name === "Logout" ? (
 						<Button
 							variant="ghost"
-							key={item.href}
+							key={item.name}
 							onClick={handleLogout}
-							className={`px-3 py-6 rounded-md transition hover:bg-gray-700 hover:text-white text-left justify-start cursor-pointer`}>
+							className="px-3 py-6 rounded-md transition hover:bg-gray-700 hover:text-white text-left justify-start cursor-pointer"
+						>
 							{item.name}
 						</Button>
 					) : (
@@ -144,7 +149,8 @@ export default function Sidebar() {
 							className={`p-3 rounded-md transition ${
 								pathname === item.href ? "bg-green-600" : "hover:bg-gray-700"
 							}`}
-							onClick={handleLinkClick}>
+							onClick={handleLinkClick}
+						>
 							{item.name}
 						</Link>
 					)
@@ -164,7 +170,8 @@ export default function Sidebar() {
 				</SheetTrigger>
 				<SheetContent
 					side="left"
-					className="bg-gray-900 text-white p-0 h-screen overflow-hidden">
+					className="bg-gray-900 text-white p-0 h-screen overflow-hidden"
+				>
 					{sidebarContent}
 				</SheetContent>
 			</Sheet>

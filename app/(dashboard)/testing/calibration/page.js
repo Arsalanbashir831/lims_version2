@@ -157,7 +157,7 @@ const CalibrationTestingPage = () => {
 
 	return (
 		<div className="p-6 bg-gray-100 min-h-screen">
-			<div className="max-w-7xl mx-auto">
+			<div className="max-w-5xl mx-auto">
 				<h1 className="text-2xl font-semibold text-gray-800 mb-6">
 					Calibration Testing
 				</h1>

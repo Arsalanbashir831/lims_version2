@@ -117,8 +117,8 @@ const SampleDetailRow = ({
 					onChange={handleChange}
 					className="w-full rounded border border-gray-300 p-2">
 					<option value="">Select Material Type</option>
-					{materialTypes.map((material) => (
-						<option key={material} value={material}>
+					{materialTypes.map((material,index) => (
+						<option key={index} value={material}>
 							{material}
 						</option>
 					))}

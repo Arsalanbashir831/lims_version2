@@ -42,16 +42,16 @@ export default function EmployeeDashboard() {
 				<CardHeader className="text-center">
 					<Avatar className="mx-auto w-28 h-28">
 						<AvatarImage
-							src={employeeData.profilePicture}
+							src={employeeData?.profilePicture}
 							alt="Employee Profile"
 						/>
-						<AvatarFallback>{employeeData.fullName.charAt(0)}</AvatarFallback>
+						<AvatarFallback>{employeeData?.fullName?.charAt(0)}</AvatarFallback>
 					</Avatar>
 					<CardTitle className="text-3xl mt-4">
-						{employeeData.fullName}
+						{employeeData?.fullName}
 					</CardTitle>
 					<p className="text-gray-600 text-lg">
-						{employeeData.position} - {employeeData.department}
+						{employeeData?.position} - {employeeData?.department}
 					</p>
 				</CardHeader>
 
@@ -62,16 +62,16 @@ export default function EmployeeDashboard() {
 							Personal Information
 						</h2>
 						<p>
-							<strong>Email:</strong> {employeeData.email}
+							<strong>Email:</strong> {employeeData?.email}
 						</p>
 						<p>
-							<strong>Gender:</strong> {employeeData.gender}
+							<strong>Gender:</strong> {employeeData?.gender}
 						</p>
 						<p>
-							<strong>Marital Status:</strong> {employeeData.maritalStatus}
+							<strong>Marital Status:</strong> {employeeData?.maritalStatus}
 						</p>
 						<p>
-							<strong>Nationality:</strong> {employeeData.nationality}
+							<strong>Nationality:</strong> {employeeData?.nationality}
 						</p>
 					</div>
 
@@ -81,20 +81,20 @@ export default function EmployeeDashboard() {
 							Employment Details
 						</h2>
 						<p>
-							<strong>Employee ID:</strong> {employeeData.employeeID}
+							<strong>Employee ID:</strong> {employeeData?.employeeID}
 						</p>
 						<p>
-							<strong>Branch:</strong> {employeeData.branchName}
+							<strong>Branch:</strong> {employeeData?.branchName}
 						</p>
 						<p>
-							<strong>Joining Date:</strong> {employeeData.joiningDate}
+							<strong>Joining Date:</strong> {employeeData?.joiningDate}
 						</p>
 						<p>
 							<strong>Employment Status:</strong>{" "}
-							{employeeData.employmentStatus}
+							{employeeData?.employmentStatus}
 						</p>
 						<p>
-							<strong>Line Manager:</strong> {employeeData.lineManager}
+							<strong>Line Manager:</strong> {employeeData?.lineManager}
 						</p>
 					</div>
 
@@ -104,20 +104,20 @@ export default function EmployeeDashboard() {
 							Salary & Benefits
 						</h2>
 						<p>
-							<strong>Basic Salary:</strong> ${employeeData.basicSalary}
+							<strong>Basic Salary:</strong> ${employeeData?.basicSalary}
 						</p>
 						<p>
-							<strong>House Allowance:</strong> ${employeeData.houseAllowance}
+							<strong>House Allowance:</strong> ${employeeData?.houseAllowance}
 						</p>
 						<p>
 							<strong>Transport Allowance:</strong> $
-							{employeeData.transportAllowance}
+							{employeeData?.transportAllowance}
 						</p>
 						<p>
-							<strong>Food Allowance:</strong> ${employeeData.foodAllowance}
+							<strong>Food Allowance:</strong> ${employeeData?.foodAllowance}
 						</p>
 						<p>
-							<strong>Total Salary:</strong> ${employeeData.totalSalary}
+							<strong>Total Salary:</strong> ${employeeData?.totalSalary}
 						</p>
 					</div>
 
@@ -127,19 +127,19 @@ export default function EmployeeDashboard() {
 							Contract Details
 						</h2>
 						<p>
-							<strong>Contract Type:</strong> {employeeData.contractType}
+							<strong>Contract Type:</strong> {employeeData?.contractType}
 						</p>
 						<p>
 							<strong>Contract Duration:</strong>{" "}
-							{employeeData.contractDuration}
+							{employeeData?.contractDuration}
 						</p>
 						<p>
 							<strong>Contract Issuance:</strong>{" "}
-							{employeeData.contractIssuanceDate}
+							{employeeData?.contractIssuanceDate}
 						</p>
 						<p>
 							<strong>Contract Expiry:</strong>{" "}
-							{employeeData.contractExpiryDate}
+							{employeeData?.contractExpiryDate}
 						</p>
 					</div>
 
@@ -148,16 +148,16 @@ export default function EmployeeDashboard() {
 							ID Information
 						</h2>
 						<p>
-							<strong>ID Number:</strong> {employeeData.idNumber}
+							<strong>ID Number:</strong> {employeeData?.idNumber}
 						</p>
 						<p>
-							<strong>Name in ID:</strong> {employeeData.nameInIDEnglish}
+							<strong>Name in ID:</strong> {employeeData?.nameInIDEnglish}
 						</p>
 						<p>
-							<strong>ID Issue Date:</strong> {employeeData.idIssueDate}
+							<strong>ID Issue Date:</strong> {employeeData?.idIssueDate}
 						</p>
 						<p>
-							<strong>ID Expiry Date:</strong> {employeeData.idExpiryDate}
+							<strong>ID Expiry Date:</strong> {employeeData?.idExpiryDate}
 						</p>
 					</div>
 
@@ -166,13 +166,13 @@ export default function EmployeeDashboard() {
 							Bank & Payments
 						</h2>
 						<p>
-							<strong>Bank Name:</strong> {employeeData.bankName}
+							<strong>Bank Name:</strong> {employeeData?.bankName}
 						</p>
 						<p>
-							<strong>Account Number:</strong> {employeeData.accountNumber}
+							<strong>Account Number:</strong> {employeeData?.accountNumber}
 						</p>
 						<p>
-							<strong>IBAN:</strong> {employeeData.iban}
+							<strong>IBAN:</strong> {employeeData?.iban}
 						</p>
 					</div>
 				</CardContent>
@@ -180,7 +180,7 @@ export default function EmployeeDashboard() {
 				{/* Download Buttons */}
 				<CardContent className="flex justify-between mt-6">
 					<Button asChild>
-						<a href={employeeData.profilePicture} download>
+						<a href={employeeData?.profilePicture} download>
 							Download Profile Picture
 						</a>
 					</Button>

@@ -31,7 +31,7 @@ const Page = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
+    <div className="p-6  bg-gray-100 min-h-screen">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-4">Lab Test Records</h1>
         <p className="text-gray-600 mb-6">
