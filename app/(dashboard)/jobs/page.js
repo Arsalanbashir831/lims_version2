@@ -117,8 +117,15 @@ const SampleLotsPage = () => {
 					noItems: row.noItems,
 					endUser: row.endUser,
 				},
-				sampleDetails: row.sampleDetails || [],
+				sampleDetails: (row.sampleDetails || []).map((detail) => ({
+					...detail,
+					testMethods: detail.testMethods
+						? detail.testMethods.map((method) => method.test_name).join(", ")
+						: "",
+				})),
 			};
+
+			console.log("payload", payload);
 
 			const response = await fetch("/api/sample-export-excel", {
 				method: "POST",

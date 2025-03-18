@@ -265,7 +265,7 @@ function SubmittedRequestsPage() {
 			/>
 
 			<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-				<DialogContent className="p-4 sm:p-6 lg:p-8 !max-w-5xl mx-auto">
+				<DialogContent className="p-4 sm:p-6 lg:p-8 md:!max-w-5xl mx-auto">
 					<DialogTitle className="text-center text-xl font-bold mb-4">
 						{dialogMode === "preview" ? "Preview Request" : "Edit Request"}
 					</DialogTitle>
@@ -273,51 +273,57 @@ function SubmittedRequestsPage() {
 					{/* Preview Modal */}
 					{dialogMode === "preview" && selectedRow && (
 						<div className="space-y-6">
-							<h3 className="text-xl font-bold mb-2">Main Request Details</h3>
-							<div className="overflow-x-auto">
-								<table className="w-full border-collapse">
-									<tbody>
-										<tr className="border-b">
-											<td className="p-2 font-medium">Job Assigned</td>
-											<td className="p-2">{selectedRow.jobId}</td>
-										</tr>
-										<tr className="border-b">
-											<td className="p-2 font-medium">Request #</td>
-											<td className="p-2">{selectedRow.requestId}</td>
-										</tr>
-										<tr className="border-b">
-											<td className="p-2 font-medium">Request Date</td>
-											<td className="p-2">
-												{new Date(selectedRow.createdAt).toLocaleDateString()}
-											</td>
-										</tr>
-										<tr className="border-b">
-											<td className="p-2 font-medium">Client</td>
-											<td className="p-2">{selectedRow.clientName}</td>
-										</tr>
-										<tr className="border-b">
-											<td className="p-2 font-medium">Project</td>
-											<td className="p-2">{selectedRow.projectName}</td>
-										</tr>
-										<tr className="border-b">
-											<td className="p-2 font-medium">Total Samples</td>
-											<td className="p-2">
-												{selectedRow.rows.reduce(
-													(sum, r) => sum + (Number(r.noOfSamples) || 0),
-													0
-												)}
-											</td>
-										</tr>
-									</tbody>
-								</table>
+							{/* Main Request Details displayed in a card layout */}
+							<div className="p-6 bg-white shadow rounded-md">
+								<h3 className="text-xl font-bold mb-4">Main Request Details</h3>
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+									<div>
+										<p className="text-sm text-gray-500">Job Assigned</p>
+										<p className="text-base font-medium">{selectedRow.jobId}</p>
+									</div>
+									<div>
+										<p className="text-sm text-gray-500">Request #</p>
+										<p className="text-base font-medium">
+											{selectedRow.requestId}
+										</p>
+									</div>
+									<div>
+										<p className="text-sm text-gray-500">Request Date</p>
+										<p className="text-base font-medium">
+											{new Date(selectedRow.createdAt).toLocaleDateString()}
+										</p>
+									</div>
+									<div>
+										<p className="text-sm text-gray-500">Client</p>
+										<p className="text-base font-medium">
+											{selectedRow.clientName}
+										</p>
+									</div>
+									<div>
+										<p className="text-sm text-gray-500">Project</p>
+										<p className="text-base font-medium">
+											{selectedRow.projectName}
+										</p>
+									</div>
+									<div>
+										<p className="text-sm text-gray-500">Total Samples</p>
+										<p className="text-base font-medium">
+											{selectedRow.rows.reduce(
+												(sum, r) => sum + (Number(r.noOfSamples) || 0),
+												0
+											)}
+										</p>
+									</div>
+								</div>
 							</div>
 
+							{/* Sample Details rendered as a shadcn Table */}
 							{selectedRow.rows && selectedRow.rows.length > 0 && (
 								<div className="mt-6 overflow-x-auto">
-									<h3 className="text-xl font-bold mb-2">Sample Details</h3>
-									<table className="w-full border-collapse">
-										<thead className="bg-gray-200">
-											<tr>
+									<h3 className="text-xl font-bold mb-4">Sample Details</h3>
+									<Table>
+										<TableHeader className="bg-gray-200">
+											<TableRow>
 												<TableHead className="p-2 border">
 													Description
 												</TableHead>
@@ -338,35 +344,49 @@ function SubmittedRequestsPage() {
 												</TableHead>
 												<TableHead className="p-2 border">Request By</TableHead>
 												<TableHead className="p-2 border">Remarks</TableHead>
-											</tr>
-										</thead>
-										<tbody>
+											</TableRow>
+										</TableHeader>
+										<TableBody>
 											{selectedRow.rows.map((detail, index) => (
-												<tr key={index} className="border-b">
-													<td className="p-2 border">
+												<TableRow key={index} className="border-b">
+													<TableCell className="p-2 border">
 														{detail.itemDescription}
-													</td>
-													<td className="p-2 border">{detail.mtcNo}</td>
-													<td className="p-2 border">{detail.sampleType}</td>
-													<td className="p-2 border">{detail.materialType}</td>
-													<td className="p-2 border">{detail.heatNo}</td>
-													<td className="p-2 border">{detail.condition}</td>
-													<td className="p-2 border">
+													</TableCell>
+													<TableCell className="p-2 border">
+														{detail.mtcNo}
+													</TableCell>
+													<TableCell className="p-2 border">
+														{detail.sampleType}
+													</TableCell>
+													<TableCell className="p-2 border">
+														{detail.materialType}
+													</TableCell>
+													<TableCell className="p-2 border">
+														{detail.heatNo}
+													</TableCell>
+													<TableCell className="p-2 border">
+														{detail.condition}
+													</TableCell>
+													<TableCell className="p-2 border">
 														{renderTestMethods(detail.testMethods)}
-													</td>
-													<td className="p-2 border">
+													</TableCell>
+													<TableCell className="p-2 border">
 														{detail.plannedTestDate || ""}
-													</td>
-													<td className="p-2 border">
+													</TableCell>
+													<TableCell className="p-2 border">
 														{detail.requestBy || ""}
-													</td>
-													<td className="p-2 border">{detail.remarks || ""}</td>
-												</tr>
+													</TableCell>
+													<TableCell className="p-2 border">
+														{detail.remarks || ""}
+													</TableCell>
+												</TableRow>
 											))}
-										</tbody>
-									</table>
+										</TableBody>
+									</Table>
 								</div>
 							)}
+
+							{/* Action Button */}
 							<div className="flex justify-end mt-4">
 								<Button onClick={() => setIsDialogOpen(false)}>Close</Button>
 							</div>
