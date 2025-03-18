@@ -25,6 +25,7 @@ import ReusableSampleLotsTable from "@/components/common/ReusableSlotsTable";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import SpecimenIdInput from "@/components/common/SpecimenIdInput";
+import { getBase64FromUrl } from "@/lib/utils";
 
 // Define the table columns for the main list.
 const columns = [
@@ -167,8 +168,56 @@ function SubmittedRequestsPage() {
 	};
 
 	// Download handler (stub).
-	const handleDownload = (row) => {
-		console.log("Download:", row);
+	const handleDownload = async (row) => {
+		try {
+			const dataUrl = await getBase64FromUrl("/logo.png");
+			const base64String = dataUrl.split("base64,")[1];
+			const rightLogoUrl = await getBase64FromUrl("/ias_logo.jpg");
+			const rightLogoBase64String = rightLogoUrl.split("base64,")[1];
+			const payload = {
+				fileName: `Testing_Request_${row.raw.requestId}.xlsx`,
+				logoBase64: base64String,
+				rightLogoBase64: rightLogoBase64String,
+				sampleInfo: {
+					jobId: row.raw.jobId,
+					requestId: row.raw.requestId,
+					projectName: row.raw.projectName,
+					clientName: row.raw.clientName,
+					requestDate: row.requestDate,
+					requestBy: row.requestBy,
+					totalSamples: row.raw.rows.reduce(
+						(sum, r) => sum + (Number(r.noOfSamples) || 0),
+						0
+					),
+				},
+				sampleDetails: (row.raw.rows || []).map((detail) => ({
+					...detail,
+					specimenIds: detail.specimenIds.join(", "),
+					testMethods: detail.testMethods
+						? detail.testMethods.map((method) => method.test_name).join(", ")
+						: "",
+				})),
+			};
+
+			const response = await fetch("/api/sample-export-excel", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			});
+
+			if (!response.ok) throw new Error("Failed to download Excel file");
+
+			const blob = await response.blob();
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = payload.fileName;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+		} catch (error) {
+			console.error("Error downloading Excel file:", error);
+		}
 	};
 
 	// --- Edit Modal Functions for Rows ---
