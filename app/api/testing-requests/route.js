@@ -6,7 +6,7 @@ export async function GET() {
 	try {
 		// Fetch all testing requests.
 		const testingSnapshot = await getDocs(collection(db, "testingRequests"));
-		let testingRequests = testingSnapshot.docs.map((docSnap) => ({
+		const testingRequests = testingSnapshot.docs.map((docSnap) => ({
 			id: docSnap.id,
 			...docSnap.data(),
 		}));
@@ -16,24 +16,56 @@ export async function GET() {
 		const jobsMap = {};
 		jobsSnapshot.docs.forEach((docSnap) => {
 			const jobData = docSnap.data();
-			// Assuming that each job document contains a 'sample' object with a 'jobId' field.
+			// Assuming each job document contains a 'sample' object with a 'jobId' field.
 			if (jobData.sample && jobData.sample.jobId) {
 				jobsMap[jobData.sample.jobId] = jobData;
 			}
 		});
 
-		// Enrich each testing request with clientName and projectName from the jobs.
-		testingRequests = testingRequests.map((req) => {
-			// req.jobId is expected to be the same as jobData.sample.jobId
-			const job = jobsMap[req.jobId];
+		// Enrich each testing request with the necessary fields.
+		// Add sampleDate from the job's createdAt and enrich each row with its corresponding MTC No,
+		// dateOfTesting (from plannedTestDate), and sampleDescription (from the matching sample detail).
+		const enrichedTestingRequests = testingRequests.map((req) => {
+			const { createdAt, jobId, requestId, rows } = req;
+			const job = jobsMap[jobId] || {};
+			const clientName = job.sample?.clientName || "";
+			const projectName = job.sample?.projectName || "";
+			const sampleDate = job.createdAt || "";
+
+			// Enrich each row.
+			const sampleDetails = job.sampleDetails || [];
+			const enrichedRows = rows.map((row) => {
+				const matchingSample = sampleDetails.find((sampleDetail) => {
+					return (
+						sampleDetail.testMethods &&
+						sampleDetail.testMethods.some(
+							(tm) => tm.test_name === row.testMethod
+						)
+					);
+				});
+				return {
+					...row,
+					mtcNo: matchingSample ? matchingSample.mtcNo : "",
+					// dateOfTesting: row.plannedTestDate || "",
+					// sampleDescription: matchingSample ? matchingSample.description : "",
+				};
+			});
+
 			return {
-				...req,
-				clientName: job?.sample?.clientName || "",
-				projectName: job?.sample?.projectName || "",
+				createdAt,
+				jobId,
+				requestId,
+				rows: enrichedRows,
+				clientName,
+				projectName,
+				sampleDate,
 			};
 		});
 
-		return NextResponse.json({ success: true, testingRequests });
+		return NextResponse.json({
+			success: true,
+			testingRequests: enrichedTestingRequests,
+		});
 	} catch (error) {
 		console.error("Error fetching testing requests:", error);
 		return NextResponse.json({ error: error.message }, { status: 500 });

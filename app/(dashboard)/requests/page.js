@@ -29,15 +29,12 @@ import { getBase64FromUrl } from "@/lib/utils";
 
 // Define the table columns for the main list.
 const columns = [
-	{ key: "jobAssigned", label: "Job Assigned #" },
 	{ key: "requestNumber", label: "Request #" },
+	{ key: "jobAssigned", label: "Job Assigned #" },
 	{ key: "requestDate", label: "Request Date" },
 	{ key: "client", label: "Client" },
 	{ key: "project", label: "Project" },
 	{ key: "totalSamples", label: "Total no of Samples" },
-	{ key: "plannedTestDate", label: "Planned Test Date" },
-	{ key: "requestBy", label: "Request By" },
-	{ key: "remarks", label: "Remarks" },
 ];
 
 // Helper function to create a default row.
@@ -327,14 +324,16 @@ function SubmittedRequestsPage() {
 								<h3 className="text-xl font-bold mb-4">Main Request Details</h3>
 								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 									<div>
-										<p className="text-sm text-gray-500">Job Assigned</p>
-										<p className="text-base font-medium">{selectedRow.jobId}</p>
-									</div>
-									<div>
 										<p className="text-sm text-gray-500">Request #</p>
 										<p className="text-base font-medium">
 											{selectedRow.requestId}
 										</p>
+										<div>
+											<p className="text-sm text-gray-500">Job Assigned</p>
+											<p className="text-base font-medium">
+												{selectedRow.jobId}
+											</p>
+										</div>
 									</div>
 									<div>
 										<p className="text-sm text-gray-500">Request Date</p>
@@ -366,72 +365,111 @@ function SubmittedRequestsPage() {
 								</div>
 							</div>
 
-							{/* Sample Details rendered as a shadcn Table */}
+							{/* Updated Sample Details Table with columns matching the edit table */}
 							{selectedRow.rows && selectedRow.rows.length > 0 && (
 								<div className="mt-6 overflow-x-auto">
 									<h3 className="text-xl font-bold mb-4">Sample Details</h3>
-									<Table>
-										<TableHeader className="bg-gray-200">
-											<TableRow>
-												<TableHead className="p-2 border">
-													Description
-												</TableHead>
-												<TableHead className="p-2 border">MTC No</TableHead>
-												<TableHead className="p-2 border">
-													Sample Type
-												</TableHead>
-												<TableHead className="p-2 border">
-													Material Type
-												</TableHead>
-												<TableHead className="p-2 border">Heat No</TableHead>
-												<TableHead className="p-2 border">Condition</TableHead>
-												<TableHead className="p-2 border">
-													Test Methods
-												</TableHead>
-												<TableHead className="p-2 border">
-													Planned Test Date
-												</TableHead>
-												<TableHead className="p-2 border">Request By</TableHead>
-												<TableHead className="p-2 border">Remarks</TableHead>
-											</TableRow>
-										</TableHeader>
-										<TableBody>
-											{selectedRow.rows.map((detail, index) => (
-												<TableRow key={index} className="border-b">
-													<TableCell className="p-2 border">
-														{detail.itemDescription}
-													</TableCell>
-													<TableCell className="p-2 border">
-														{detail.mtcNo}
-													</TableCell>
-													<TableCell className="p-2 border">
-														{detail.sampleType}
-													</TableCell>
-													<TableCell className="p-2 border">
-														{detail.materialType}
-													</TableCell>
-													<TableCell className="p-2 border">
-														{detail.heatNo}
-													</TableCell>
-													<TableCell className="p-2 border">
-														{detail.condition}
-													</TableCell>
-													<TableCell className="p-2 border">
-														{renderTestMethods(detail.testMethods)}
-													</TableCell>
-													<TableCell className="p-2 border">
-														{detail.plannedTestDate || ""}
-													</TableCell>
-													<TableCell className="p-2 border">
-														{detail.requestBy || ""}
-													</TableCell>
-													<TableCell className="p-2 border">
-														{detail.remarks || ""}
-													</TableCell>
-												</TableRow>
-											))}
-										</TableBody>
-									</Table>
+									<ScrollArea className="w-full max-w-4xl mx-auto">
+										<div className="overflow-x-auto mb-4">
+											<Table>
+												<TableHeader className="bg-gray-200">
+													<TableRow>
+														<TableHead className="p-2 border">
+															Item No.
+														</TableHead>
+														<TableHead className="p-2 border">
+															Item Description
+														</TableHead>
+														<TableHead className="p-2 border">
+															Test Method
+														</TableHead>
+														<TableHead className="p-2 border">Heat #</TableHead>
+														<TableHead className="p-2 border">
+															Dimension/Spec &amp; Specimen Location
+														</TableHead>
+														<TableHead className="p-2 border">
+															No of Samples
+														</TableHead>
+														<TableHead className="p-2 border">
+															No of Specimen
+														</TableHead>
+														<TableHead className="p-2 border">
+															Assign Specimen ID
+														</TableHead>
+														<TableHead className="p-2 border">
+															Planned Test Date
+														</TableHead>
+														<TableHead className="p-2 border">
+															Request By
+														</TableHead>
+														<TableHead className="p-2 border">
+															Remarks
+														</TableHead>
+														{/* If Actions are not needed in preview, omit this column */}
+														{/* <TableHead className="p-2 border">Actions</TableHead> */}
+													</TableRow>
+												</TableHeader>
+												<TableBody>
+													{selectedRow.rows.map((row, index) => (
+														<TableRow key={index} className="border-b">
+															{/* Item No. */}
+															<TableCell className="p-2 border">
+																{row.itemNo}
+															</TableCell>
+															{/* Item Description */}
+															<TableCell className="p-2 border">
+																{row.itemDescription}
+															</TableCell>
+															{/* Test Method */}
+															<TableCell className="p-2 border">
+																{row.testMethod}
+															</TableCell>
+															{/* Heat # */}
+															<TableCell className="p-2 border">
+																{row.heatNo}
+															</TableCell>
+															{/* Dimension/Spec & Specimen Location */}
+															<TableCell className="p-2 border">
+																{row.dimensionSpec}
+															</TableCell>
+															{/* No of Samples */}
+															<TableCell className="p-2 border">
+																{row.noOfSamples}
+															</TableCell>
+															{/* No of Specimen */}
+															<TableCell className="p-2 border">
+																{row.noOfSpecimen}
+															</TableCell>
+															{/* Assign Specimen ID */}
+															<TableCell className="p-2 border">
+																{row.specimenIds
+																	? row.specimenIds.join(", ")
+																	: ""}
+															</TableCell>
+															{/* Planned Test Date */}
+															<TableCell className="p-2 border">
+																{row.plannedTestDate
+																	? new Date(
+																			row.plannedTestDate
+																	  ).toLocaleDateString()
+																	: ""}
+															</TableCell>
+															{/* Request By */}
+															<TableCell className="p-2 border">
+																{row.requestBy}
+															</TableCell>
+															{/* Remarks */}
+															<TableCell className="p-2 border">
+																{row.remarks}
+															</TableCell>
+															{/* Actions column omitted in preview */}
+														</TableRow>
+													))}
+												</TableBody>
+											</Table>
+										</div>
+										<ScrollBar orientation="horizontal" />
+									</ScrollArea>
 								</div>
 							)}
 
