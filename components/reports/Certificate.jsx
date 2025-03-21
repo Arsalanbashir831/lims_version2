@@ -28,7 +28,7 @@ export default function Certificate({ certificate, group, pageStyle }) {
 	const { testMethod, certificateDetails, tableData, footer } = group;
 
 	// Example: Construct the live preview URL for your app (adjust domain/path as needed)
-	const livePreviewUrl = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/reports/${requestId}/preview`;
+	const livePreviewUrl = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/public/certificate/${requestId}/`;
 
 	return (
 		<Card className="mt-4 gap-0" style={pageStyle}>
