@@ -62,6 +62,8 @@ function ReportForm({ initialData }) {
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	// State: mapping each group key to an array of specimen section indexes.
 	const [specimenSections, setSpecimenSections] = useState({});
+	// NEW: extraRows now is an object mapping specimenKey to an array of extra row unique IDs.
+	const [extraRows, setExtraRows] = useState({});
 
 	// Only fetch testing requests if not in edit mode.
 	useEffect(() => {
@@ -224,6 +226,26 @@ function ReportForm({ initialData }) {
 		// Optionally: clear the form values related to this specimen.
 	};
 
+	// NEW: addExtraRow now adds a unique ID to an array for this specimen.
+	const addExtraRow = (specimenKey) => {
+		setExtraRows((prev) => {
+			const currentRows = prev[specimenKey] || [];
+			const newId = Date.now() + Math.random();
+			return { ...prev, [specimenKey]: [...currentRows, newId] };
+		});
+	};
+
+	// NEW: removeExtraRow removes the row with the given extraId.
+	const removeExtraRow = (specimenKey, extraId) => {
+		setExtraRows((prev) => {
+			const currentRows = prev[specimenKey] || [];
+			return {
+				...prev,
+				[specimenKey]: currentRows.filter((id) => id !== extraId),
+			};
+		});
+	};
+
 	// Helper to compute available specimen IDs for a given group.
 	const getAvailableSpecimenOptions = (groupKey, rows) => {
 		// Gather all specimen IDs from all rows (using union to remove duplicates)
@@ -328,7 +350,8 @@ function ReportForm({ initialData }) {
 		const specimenIdKey = `${groupKey}-specimen-${specimenIndex}-id`;
 		const specimenId = formValues[specimenIdKey] || "";
 		const availableOptions = getAvailableSpecimenOptions(groupKey, rows);
-
+		// Define a unique key for this specimen section.
+		const specimenKey = `${groupKey}-specimen-${specimenIndex}`;
 		return (
 			<div
 				key={`${groupKey}-specimen-${specimenIndex}`}
@@ -359,125 +382,247 @@ function ReportForm({ initialData }) {
 					</SelectContent>
 				</Select>
 				{specimenId && (
-					<ScrollArea className="w-full max-w-4xl mx-auto mt-4">
-						<div className="overflow-x-auto mb-4">
-							<Table>
-								<TableHeader>
-									<TableRow>
-										{testDefinition.test_columns.map((col) => (
-											<TableHead key={col}>{col}</TableHead>
-										))}
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{rows.map((row, rowIndex) => (
-										<TableRow key={rowIndex}>
-											{testDefinition.test_columns.map((col) => {
-												const fieldKey = `${groupKey}-specimen-${specimenIndex}-${rowIndex}-${col}`;
-												let initialValue = formValues[fieldKey];
-												if (initialValue === undefined) {
-													if (col.toLowerCase() === "mtc no") {
-														initialValue = row.mtcNo || "";
-													} else if (col.toLowerCase() === "test method") {
-														initialValue = row.testMethod || "";
-													} else {
-														const apiKey = Object.keys(row).find(
-															(key) =>
-																key.toLowerCase() ===
-																col.replace(/ /g, "").toLowerCase()
-														);
-														initialValue = row[apiKey] || "";
-													}
-												}
-												if (col.toLowerCase() === "images") {
-													return (
-														<TableCell key={col}>
-															<div className="relative w-full h-24">
-																{formValues[fieldKey] ? (
-																	<img
-																		src={
-																			typeof formValues[fieldKey] === "object"
-																				? formValues[fieldKey].previewUrl ||
-																				  formValues[fieldKey].downloadURL
-																				: formValues[fieldKey]
-																		}
-																		alt="Preview"
-																		className="absolute top-0 left-0 h-full w-full object-contain border rounded"
-																	/>
-																) : (
-																	<div className="absolute top-0 left-0 h-full w-full flex items-center justify-center text-gray-400 border rounded">
-																		No Image
-																	</div>
-																)}
-																<input
-																	type="file"
-																	accept="image/*"
-																	onChange={async (e) => {
-																		const file = e.target.files[0];
-																		if (file) {
-																			const certificateNo =
-																				formValues[
-																					`cert-${groupKey}-gripcoRefNo`
-																				] ||
-																				formValues[`cert-${groupKey}-mtcNo`] ||
-																				"default";
-																			const fileExtension = file.name
-																				.split(".")
-																				.pop();
-																			const fileName = `${certificateNo}.${fileExtension}`;
-																			const filePath = `certificates/${certificateNo}/${fileName}`;
-																			try {
-																				const storageRef = ref(
-																					storage,
-																					filePath
-																				);
-																				const snapshot = await uploadBytes(
-																					storageRef,
-																					file
-																				);
-																				const downloadURL =
-																					await getDownloadURL(snapshot.ref);
-																				const previewUrl =
-																					URL.createObjectURL(file);
-																				handleInputChange(fieldKey, {
-																					downloadURL,
-																					previewUrl,
-																				});
-																			} catch (error) {
-																				console.error(
-																					"Error uploading image:",
-																					error
-																				);
-																			}
-																		}
-																	}}
-																	className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-																/>
-															</div>
-														</TableCell>
-													);
-												} else {
-													return (
-														<TableCell key={col}>
-															<Input
-																value={initialValue}
-																onChange={(e) =>
-																	handleInputChange(fieldKey, e.target.value)
-																}
-																placeholder={col}
-																className="w-full"
-															/>
-														</TableCell>
-													);
-												}
-											})}
+					<>
+						<ScrollArea className="w-full max-w-4xl mx-auto mt-4">
+							<div className="overflow-x-auto mb-4">
+								<Table>
+									<TableHeader>
+										<TableRow>
+											{testDefinition.test_columns.map((col) => (
+												<TableHead key={col}>{col}</TableHead>
+											))}
+											{/* Extra column for row actions */}
+											<TableHead>Actions</TableHead>
 										</TableRow>
-									))}
-								</TableBody>
-							</Table>
+									</TableHeader>
+									<TableBody>
+										{/* Render base rows (non-removable) */}
+										{rows.map((row, rowIndex) => (
+											<TableRow key={`base-${rowIndex}`}>
+												{testDefinition.test_columns.map((col) => {
+													const fieldKey = `${groupKey}-specimen-${specimenIndex}-${rowIndex}-${col}`;
+													let initialValue = formValues[fieldKey];
+													if (initialValue === undefined) {
+														if (col.toLowerCase() === "mtc no") {
+															initialValue = row.mtcNo || "";
+														} else if (col.toLowerCase() === "test method") {
+															initialValue = row.testMethod || "";
+														} else {
+															const apiKey = Object.keys(row).find(
+																(key) =>
+																	key.toLowerCase() ===
+																	col.replace(/ /g, "").toLowerCase()
+															);
+															initialValue = (apiKey && row[apiKey]) || "";
+														}
+													}
+													if (col.toLowerCase() === "images") {
+														return (
+															<TableCell key={col}>
+																<div className="relative w-full h-24">
+																	{formValues[fieldKey] ? (
+																		<img
+																			src={
+																				typeof formValues[fieldKey] === "object"
+																					? formValues[fieldKey].previewUrl ||
+																					  formValues[fieldKey].downloadURL
+																					: formValues[fieldKey]
+																			}
+																			alt="Preview"
+																			className="absolute top-0 left-0 h-full w-full object-contain border rounded"
+																		/>
+																	) : (
+																		<div className="absolute top-0 left-0 h-full w-full flex items-center justify-center text-gray-400 border rounded">
+																			No Image
+																		</div>
+																	)}
+																	<input
+																		type="file"
+																		accept="image/*"
+																		onChange={async (e) => {
+																			const file = e.target.files[0];
+																			if (file) {
+																				const certificateNo =
+																					formValues[
+																						`cert-${groupKey}-gripcoRefNo`
+																					] ||
+																					formValues[
+																						`cert-${groupKey}-mtcNo`
+																					] ||
+																					"default";
+																				const fileExtension = file.name
+																					.split(".")
+																					.pop();
+																				const fileName = `${certificateNo}.${fileExtension}`;
+																				const filePath = `certificates/${certificateNo}/${fileName}`;
+																				try {
+																					const storageRef = ref(
+																						storage,
+																						filePath
+																					);
+																					const snapshot = await uploadBytes(
+																						storageRef,
+																						file
+																					);
+																					const downloadURL =
+																						await getDownloadURL(snapshot.ref);
+																					const previewUrl =
+																						URL.createObjectURL(file);
+																					handleInputChange(fieldKey, {
+																						downloadURL,
+																						previewUrl,
+																					});
+																				} catch (error) {
+																					console.error(
+																						"Error uploading image:",
+																						error
+																					);
+																				}
+																			}
+																		}}
+																		className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+																	/>
+																</div>
+															</TableCell>
+														);
+													} else {
+														return (
+															<TableCell key={col}>
+																<Input
+																	value={initialValue}
+																	onChange={(e) =>
+																		handleInputChange(fieldKey, e.target.value)
+																	}
+																	placeholder={col}
+																	className="w-full"
+																/>
+															</TableCell>
+														);
+													}
+												})}
+												{/* Empty cell for base rows (no action) */}
+												<TableCell />
+											</TableRow>
+										))}
+										{/* Render extra (user-added) rows with a remove button */}
+										{(extraRows[specimenKey] || []).map((extraId) => (
+											<TableRow key={`extra-${extraId}`}>
+												{testDefinition.test_columns.map((col) => {
+													const fieldKey = `${groupKey}-specimen-${specimenIndex}-extra-${extraId}-${col}`;
+													let initialValue = formValues[fieldKey];
+													if (initialValue === undefined) {
+														initialValue = "";
+													}
+													if (col.toLowerCase() === "images") {
+														return (
+															<TableCell key={col}>
+																<div className="relative w-full h-24">
+																	{formValues[fieldKey] ? (
+																		<img
+																			src={
+																				typeof formValues[fieldKey] === "object"
+																					? formValues[fieldKey].previewUrl ||
+																					  formValues[fieldKey].downloadURL
+																					: formValues[fieldKey]
+																			}
+																			alt="Preview"
+																			className="absolute top-0 left-0 h-full w-full object-contain border rounded"
+																		/>
+																	) : (
+																		<div className="absolute top-0 left-0 h-full w-full flex items-center justify-center text-gray-400 border rounded">
+																			No Image
+																		</div>
+																	)}
+																	<input
+																		type="file"
+																		accept="image/*"
+																		onChange={async (e) => {
+																			const file = e.target.files[0];
+																			if (file) {
+																				const certificateNo =
+																					formValues[
+																						`cert-${groupKey}-gripcoRefNo`
+																					] ||
+																					formValues[
+																						`cert-${groupKey}-mtcNo`
+																					] ||
+																					"default";
+																				const fileExtension = file.name
+																					.split(".")
+																					.pop();
+																				const fileName = `${certificateNo}.${fileExtension}`;
+																				const filePath = `certificates/${certificateNo}/${fileName}`;
+																				try {
+																					const storageRef = ref(
+																						storage,
+																						filePath
+																					);
+																					const snapshot = await uploadBytes(
+																						storageRef,
+																						file
+																					);
+																					const downloadURL =
+																						await getDownloadURL(snapshot.ref);
+																					const previewUrl =
+																						URL.createObjectURL(file);
+																					handleInputChange(fieldKey, {
+																						downloadURL,
+																						previewUrl,
+																					});
+																				} catch (error) {
+																					console.error(
+																						"Error uploading image:",
+																						error
+																					);
+																				}
+																			}
+																		}}
+																		className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+																	/>
+																</div>
+															</TableCell>
+														);
+													} else {
+														return (
+															<TableCell key={col}>
+																<Input
+																	value={initialValue}
+																	onChange={(e) =>
+																		handleInputChange(fieldKey, e.target.value)
+																	}
+																	placeholder={col}
+																	className="w-full"
+																/>
+															</TableCell>
+														);
+													}
+												})}
+												{/* Action cell for extra row */}
+												<TableCell>
+													<Button
+														variant="outline"
+														size="sm"
+														onClick={() =>
+															removeExtraRow(specimenKey, extraId)
+														}>
+														Remove Row
+													</Button>
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
+							</div>
+							<ScrollBar orientation="horizontal" />
+						</ScrollArea>
+						<div className="flex justify-end space-x-2 mt-2">
+							<Button
+								variant="outline"
+								onClick={() => addExtraRow(specimenKey)}>
+								Add Row
+							</Button>
 						</div>
-						<ScrollBar orientation="horizontal" />
-					</ScrollArea>
+					</>
 				)}
 			</div>
 		);
@@ -526,6 +671,7 @@ function ReportForm({ initialData }) {
 		groupedRows,
 		formValues,
 		specimenSections,
+		extraRows, // Added extraRows so changes trigger a re-render
 		renderCertificateDetails,
 		renderFooterInputs,
 		handleInputChange,
@@ -564,7 +710,8 @@ function ReportForm({ initialData }) {
 				(specimenIndex) => {
 					const specimenIdKey = `${groupKey}-specimen-${specimenIndex}-id`;
 					const specimenId = formValues[specimenIdKey] || "";
-					const tableData = rows.map((row, rowIndex) => {
+					// Base rows
+					const baseTableData = rows.map((row, rowIndex) => {
 						const rowData = {};
 						testDefinition.test_columns.forEach((col) => {
 							const fieldKey = `${groupKey}-specimen-${specimenIndex}-${rowIndex}-${col}`;
@@ -579,7 +726,7 @@ function ReportForm({ initialData }) {
 										(key) =>
 											key.toLowerCase() === col.replace(/ /g, "").toLowerCase()
 									);
-									value = row[apiKey] || "";
+									value = (apiKey && row[apiKey]) || "";
 								}
 							}
 							if (
@@ -594,6 +741,28 @@ function ReportForm({ initialData }) {
 						});
 						return rowData;
 					});
+					// Extra rows
+					const specimenKey = `${groupKey}-specimen-${specimenIndex}`;
+					const extraRowIds = extraRows[specimenKey] || [];
+					const extraTableData = extraRowIds.map((extraId) => {
+						const rowData = {};
+						testDefinition.test_columns.forEach((col) => {
+							const fieldKey = `${groupKey}-specimen-${specimenIndex}-extra-${extraId}-${col}`;
+							let value = formValues[fieldKey];
+							if (value === undefined) value = "";
+							if (
+								col.toLowerCase() === "images" &&
+								value &&
+								typeof value === "object" &&
+								value.downloadURL
+							) {
+								value = value.downloadURL;
+							}
+							rowData[col] = value;
+						});
+						return rowData;
+					});
+					const tableData = [...baseTableData, ...extraTableData];
 					return {
 						specimenId,
 						tableData,
@@ -666,6 +835,7 @@ function ReportForm({ initialData }) {
 		getCertificateFieldValue,
 		isEditMode,
 		specimenSections,
+		extraRows,
 	]);
 
 	return (

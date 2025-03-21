@@ -23,12 +23,20 @@ export default function Certificate({ certificate, group, pageStyle }) {
 		sampleDate,
 		issuanceNumber,
 	} = certificate;
-	console.log(certificate);
 	// Fields specific to each group/test method
-	const { testMethod, certificateDetails, tableData, footer } = group;
+	const { testMethod, certificateDetails, tableData, footer, specimenId } =
+		group;
 
 	// Example: Construct the live preview URL for your app (adjust domain/path as needed)
 	const livePreviewUrl = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/public/certificate/${requestId}/`;
+
+	// Gather unique image URLs from the table data.
+	const images =
+		tableData && Array.isArray(tableData)
+			? Array.from(
+					new Set(tableData.map((row) => row.images).filter((img) => !!img))
+			  )
+			: [];
 
 	return (
 		<Card className="mt-4 gap-0" style={pageStyle}>
@@ -45,7 +53,6 @@ export default function Certificate({ certificate, group, pageStyle }) {
 							className="object-contain"
 						/>
 					</div>
-
 					{/* Right: IAS logo & QR code */}
 					<div className="flex items-start gap-2">
 						{/* IAS logo */}
@@ -61,8 +68,6 @@ export default function Certificate({ certificate, group, pageStyle }) {
 							value={livePreviewUrl}
 							size={80} // Adjust size as desired
 						/>
-						{/* Optionally add a small label below the QR */}
-						{/* <span className="text-xs text-gray-500">Scan to view online</span> */}
 					</div>
 				</div>
 
@@ -164,11 +169,32 @@ export default function Certificate({ certificate, group, pageStyle }) {
 					</div>
 				</div>
 
-				{/* TABLE / DETAILS FOR THE GROUP */}
+				{/* HEADER FOR TABLE */}
 				<h3 className="text-base font-semibold mb-2 uppercase">
-					{testMethod || "N/A"}
+					{`${testMethod} - (${specimenId})` || "N/A"}
 				</h3>
-				<MethodPreviewTable testMethod={testMethod} tableData={tableData} />
+				{/* Render the table without the image column */}
+				<MethodPreviewTable
+					testMethod={testMethod}
+					tableData={tableData}
+					hideImageColumn={true}
+				/>
+				{/* Render images below the table */}
+				{images.length > 0 && (
+					<div className="mt-4">
+						{/* <h4 className="font-semibold mb-2">Images:</h4> */}
+						<div className="flex flex-wrap gap-4">
+							{images.map((imgUrl, idx) => (
+								<img
+									key={idx}
+									src={imgUrl}
+									alt={`Specimen ${specimenId} Image ${idx + 1}`}
+									className="max-w-xs object-contain border rounded"
+								/>
+							))}
+						</div>
+					</div>
+				)}
 			</CardContent>
 
 			{/* SIGNATURE & LEGAL SECTION */}
