@@ -154,7 +154,7 @@ const LabEquipments = () => {
 
 	return (
 		<div className="p-6 bg-gray-100 min-h-screen">
-			<div className="max-w-5xl mx-auto">
+			<div className="container mx-auto">
 				<h1 className="text-2xl font-semibold text-gray-800 mb-6">
 					Equipment Inventory List
 				</h1>
