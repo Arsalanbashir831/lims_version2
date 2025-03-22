@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash } from "lucide-react";
 import TestMethodsDropdown from "@/components/common/TestMethodsDropdown";
-import { testMethods } from "@/lib/constants";
+import { ROUTES, testMethods } from "@/lib/constants";
 import {
 	Table,
 	TableBody,
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 // Arrays for select options
 const typeOfSamples = [
@@ -220,6 +221,7 @@ const SampleDetailsTable = ({
 );
 
 const SampleLotForm = () => {
+	const router = useRouter();
 	// Add a jobId field to the sample (to be generated on the server)
 	const defaultSample = {
 		clientName: "",
@@ -313,6 +315,7 @@ const SampleLotForm = () => {
 			// Reset the form after successful submission
 			setSample(defaultSample);
 			setSampleDetails(defaultDetails);
+			router.push(ROUTES.DASHBOARD.JOBS.INDEX);
 		} catch (error) {
 			console.error("Error adding sample lot:", error);
 			toast.error("Error adding sample lot.");

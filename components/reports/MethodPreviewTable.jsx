@@ -30,11 +30,23 @@ export default function MethodPreviewTable({ testMethod, tableData }) {
 			}}>
 			<thead>
 				<tr>
-					{testDefinition.test_columns.map((col) => (
+					{/* {testDefinition.test_columns.map((col) => (
 						<th key={col} style={thStyle}>
 							{col}
 						</th>
-					))}
+					))} */}
+					{testDefinition.test_columns.map((col) => {
+						// If it's an images column, show an image if there's a valid URL
+						if (col.toLowerCase() === "images") {
+							return null;
+						}
+
+						return (
+							<th key={col} style={thStyle}>
+								{col}
+							</th>
+						);
+					})}
 				</tr>
 			</thead>
 			<tbody>
@@ -45,19 +57,7 @@ export default function MethodPreviewTable({ testMethod, tableData }) {
 
 							// If it's an images column, show an image if there's a valid URL
 							if (col.toLowerCase() === "images") {
-								return (
-									<td key={col} style={tdStyle}>
-										{typeof cellValue === "string" && cellValue ? (
-											<img
-												src={cellValue}
-												alt="Preview"
-												style={{ maxHeight: "80px", objectFit: "contain" }}
-											/>
-										) : (
-											"No Image"
-										)}
-									</td>
-								);
+								return null;
 							}
 
 							return (

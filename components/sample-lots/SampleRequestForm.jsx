@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import SpecimenIdInput from "@/components/common/SpecimenIdInput";
+import { useRouter } from "next/navigation";
+import { ROUTES } from "@/lib/constants";
 
 // Helper function to create a default row.
 const getDefaultRow = () => ({
@@ -39,6 +41,7 @@ const getDefaultRow = () => ({
 
 function SampleRequestForm() {
 	// States for jobs, selected job, job ID, and form rows.
+	const router = useRouter();
 	const [jobs, setJobs] = useState([]);
 	const [selectedJobId, setSelectedJobId] = useState("");
 	const [selectedJob, setSelectedJob] = useState(null);
@@ -137,6 +140,7 @@ function SampleRequestForm() {
 				console.log("Testing request submitted with ID:", result.requestId);
 				toast.success("Request submitted successfully");
 				setRows([getDefaultRow()]);
+				router.push(ROUTES.DASHBOARD.REQUESTS.INDEX);
 			} else {
 				console.error("Error submitting testing request:", result.error);
 				toast.error(result.error || "Failed to submit request");

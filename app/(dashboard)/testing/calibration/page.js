@@ -123,7 +123,7 @@ const CalibrationTestingPage = () => {
 	const handleDownloadExcel = async () => {
 		try {
 			// Convert logo image to Base64
-			const dataUrl = await getBase64FromUrl("/logo.png");
+			const dataUrl = await getBase64FromUrl("/logo.jpg");
 			// Extract the base64 string from the data URL
 			const base64String = dataUrl.split("base64,")[1];
 			const response = await fetch("/api/export-excel", {
@@ -134,7 +134,7 @@ const CalibrationTestingPage = () => {
 					data,
 					fileName,
 					base64String,
-					imagePath: "logo.png",
+					imagePath: "logo.jpg",
 				}),
 			});
 

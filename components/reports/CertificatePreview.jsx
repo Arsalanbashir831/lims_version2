@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import htmlDocx from "html-docx-js/dist/html-docx";
 import ExcelJS from "exceljs";
 import QRCode from "qrcode"; // For generating the QR code data URI
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import { Button } from "@/components/ui/button";
-import { generateCertificateHTML } from "@/lib/utils"; // Your existing docx generator
 import Certificate from "@/components/reports/Certificate";
 
-// If you have a utility to fetch a URL as a data URI:
+// Utility to fetch a URL as a data URI:
 async function fetchAsDataURI(url) {
 	try {
 		const res = await fetch(url);
@@ -40,6 +40,7 @@ export default function CertificatePreview({
 
 	const [certificateData, setCertificateData] = useState(null);
 	const [loading, setLoading] = useState(true);
+	const [isDownloading, setIsDownloading] = useState(false);
 
 	useEffect(() => {
 		async function fetchCertificate() {
@@ -58,54 +59,7 @@ export default function CertificatePreview({
 	}, [id]);
 
 	// -----------------------
-	//   1) DOCX Download
-	// -----------------------
-	// const downloadDocx = async () => {
-	// 	if (!certificateData) return;
-	// 	const groupHTMLs = [];
-
-	// 	for (const group of certificateData.groups || []) {
-	// 		for (const specimenSection of group.specimenSections || []) {
-	// 			// Create a group object that overrides tableData with this specimen's tableData.
-	// 			const groupForSpecimen = {
-	// 				...group,
-	// 				tableData: specimenSection.tableData,
-	// 				specimenId: specimenSection.specimenId,
-	// 			};
-	// 			const singleCertHTML = await generateCertificateHTML(
-	// 				certificateData,
-	// 				groupForSpecimen
-	// 			);
-	// 			groupHTMLs.push(`
-	//         <div style="page-break-after: always;">
-	//           ${singleCertHTML}
-	//         </div>
-	//       `);
-	// 		}
-	// 	}
-
-	// 	const finalHTML = `
-	//     <html>
-	//       <head><meta charset="UTF-8"><title>Certificates</title></head>
-	//       <body style="margin: 0; padding: 0;">
-	//         ${groupHTMLs.join("")}
-	//       </body>
-	//     </html>
-	//   `;
-
-	// 	const blob = htmlDocx.asBlob(finalHTML);
-	// 	const url = URL.createObjectURL(blob);
-	// 	const link = document.createElement("a");
-	// 	link.href = url;
-	// 	link.download = "certificate.docx";
-	// 	document.body.appendChild(link);
-	// 	link.click();
-	// 	document.body.removeChild(link);
-	// 	URL.revokeObjectURL(url);
-	// };
-
-	// -----------------------
-	//   2) EXCEL Download
+	//   1) EXCEL Download
 	// -----------------------
 	const downloadExcel = async () => {
 		if (!certificateData) return;
@@ -113,7 +67,6 @@ export default function CertificatePreview({
 		// 1) Prepare images as data URIs (GRIPCO logo, IAS logo, QR code)
 		const gripcoLogoDataUri = await fetchAsDataURI("/logo.jpg");
 		const iasLogoDataUri = await fetchAsDataURI("/ias_logo.jpg");
-		// Build the livePreviewUrl if you do the same as in generateCertificateHTML
 		const livePreviewUrl = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/public/certificate/${certificateData.requestId}`;
 		const qrCodeDataUri = await QRCode.toDataURL(livePreviewUrl, {
 			margin: 1,
@@ -131,14 +84,40 @@ export default function CertificatePreview({
 			? Buffer.from(qrCodeDataUri.split(",")[1], "base64")
 			: null;
 
-		// 2) Create a new workbook
+		// 2) Create a new workbook and a single worksheet
 		const workbook = new ExcelJS.Workbook();
-
-		// Optional: Set workbook properties
 		workbook.creator = "GRIPCO";
 		workbook.created = new Date();
 
-		// For each group + specimen, create a new worksheet
+		const worksheet = workbook.addWorksheet("Certificates");
+
+		// Set some column widths so we have space
+		worksheet.columns = [
+			{ width: 20 }, // Col A
+			{ width: 20 }, // Col B
+			{ width: 20 }, // Col C
+			{ width: 20 }, // Col D
+			{ width: 20 }, // Col E
+			{ width: 20 }, // Col F
+			{ width: 20 }, // Col G
+			{ width: 20 }, // Col H
+		];
+
+		// Example: add GRIPCO logo to the sheet
+		if (logoGripcoBuffer) {
+			const gripcoLogoId = workbook.addImage({
+				buffer: logoGripcoBuffer,
+				extension: "jpeg",
+			});
+			worksheet.addImage(gripcoLogoId, {
+				tl: { col: 0, row: 0 },
+				ext: { width: 200, height: 70 },
+			});
+		}
+
+		// Initialize a row counter to keep track of where to add the next certificate block.
+		let currentRow = 3; // Starting after images/header
+
 		const { groups = [] } = certificateData;
 		for (let g = 0; g < groups.length; g++) {
 			const group = groups[g];
@@ -146,87 +125,26 @@ export default function CertificatePreview({
 
 			for (let s = 0; s < specimenSections.length; s++) {
 				const specimen = specimenSections[s];
-				const sheetName = `G${g + 1}-S${s + 1}`;
-				const worksheet = workbook.addWorksheet(sheetName);
 
-				// ---------- Insert images into the workbook ----------
-				let gripcoLogoId, iasLogoId, qrCodeId;
-				if (logoGripcoBuffer) {
-					gripcoLogoId = workbook.addImage({
-						buffer: logoGripcoBuffer,
-						extension: "jpeg",
-					});
-				}
-				if (logoIasBuffer) {
-					iasLogoId = workbook.addImage({
-						buffer: logoIasBuffer,
-						extension: "jpeg",
-					});
-				}
-				if (qrCodeBuffer) {
-					qrCodeId = workbook.addImage({
-						buffer: qrCodeBuffer,
-						extension: "png",
-					});
-				}
-
-				// Set some column widths so we have space
-				worksheet.columns = [
-					{ width: 20 }, // Col A
-					{ width: 20 }, // Col B
-					{ width: 20 }, // Col C
-					{ width: 20 }, // Col D
-					{ width: 20 }, // Col E
-					{ width: 20 }, // Col F
-					{ width: 20 }, // Col G
-					{ width: 20 }, // Col H
-				];
-
-				// Insert the images in row 1, adjusting the positions as needed.
-				// Example: GRIPCO logo on left, IAS + QR code on the right.
-				if (gripcoLogoId) {
-					worksheet.addImage(gripcoLogoId, {
-						tl: { col: 0, row: 0 }, // top-left corners
-						ext: { width: 200, height: 70 }, // size in px
-					});
-				}
-				if (iasLogoId) {
-					worksheet.addImage(iasLogoId, {
-						tl: { col: 6, row: 0 },
-						ext: { width: 50, height: 70 },
-					});
-				}
-				if (qrCodeId) {
-					worksheet.addImage(qrCodeId, {
-						tl: { col: 7, row: 0 },
-						ext: { width: 60, height: 60 },
-					});
-				}
-
-				// We can merge some cells for the "Test Certificate" title
-				worksheet.mergeCells("A3", "H3");
-				const titleCell = worksheet.getCell("A3");
+				// --- Certificate Header ---
+				worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+				const titleCell = worksheet.getCell(`A${currentRow}`);
 				titleCell.value = "TEST CERTIFICATE";
 				titleCell.alignment = { horizontal: "center" };
 				titleCell.font = { bold: true, size: 14 };
+				currentRow++;
 
-				// -------------- Certificate Info (left column) --------------
-				// We'll place these in row 5-20 or so, adjusting as needed
-				// You can also merge cells if you want a single wide cell.
+				// --- Certificate Info (Left Column) ---
 				const certInfo = group.certificateDetails || {};
-				// Some convenient row index references
-				let rowIndex = 5;
+				let rowIndexLeft = currentRow;
 				function setLabelValue(label, value) {
-					// Label in col A, value in col B
-					const labelCell = worksheet.getCell(`A${rowIndex}`);
+					const labelCell = worksheet.getCell(`A${rowIndexLeft}`);
 					labelCell.value = label;
 					labelCell.font = { bold: true };
-					const valueCell = worksheet.getCell(`B${rowIndex}`);
+					const valueCell = worksheet.getCell(`B${rowIndexLeft}`);
 					valueCell.value = value || "N/A";
-					rowIndex++;
+					rowIndexLeft++;
 				}
-
-				// Left side
 				setLabelValue(
 					"Client Name:",
 					certInfo.clientNameCert || certificateData.clientName
@@ -249,9 +167,8 @@ export default function CertificatePreview({
 				setLabelValue("Test Method:", certInfo.testMethod);
 				setLabelValue("Sample Prep:", certInfo.samplePrepMethod);
 
-				// -------------- Certificate Info (right column) --------------
-				// Let's do it from col F and G
-				let rowIndexRight = 5;
+				// --- Certificate Info (Right Column) ---
+				let rowIndexRight = currentRow;
 				function setLabelValueRight(label, value) {
 					const labelCell = worksheet.getCell(`F${rowIndexRight}`);
 					labelCell.value = label;
@@ -260,7 +177,6 @@ export default function CertificatePreview({
 					valueCell.value = value || "N/A";
 					rowIndexRight++;
 				}
-
 				setLabelValueRight("Date of Sampling:", certInfo.dateOfSampling);
 				setLabelValueRight("Date of Testing:", certInfo.dateOfTesting);
 				setLabelValueRight("Issue Date:", certInfo.issueDate);
@@ -271,28 +187,31 @@ export default function CertificatePreview({
 				setLabelValueRight("Issuance #:", certificateData.issuanceNumber);
 				setLabelValueRight("Revision #:", certInfo.revisionNo);
 
-				// -------------- Specimen & TestMethod Title --------------
-				worksheet.mergeCells("A21", "H21");
-				const specTitleCell = worksheet.getCell("A21");
+				// Update currentRow to the maximum of the two sides
+				currentRow = Math.max(rowIndexLeft, rowIndexRight) + 1;
+
+				// --- Specimen & Test Method Title ---
+				worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+				const specTitleCell = worksheet.getCell(`A${currentRow}`);
 				specTitleCell.value = `Specimen ${specimen.specimenId || "N/A"} – ${
 					group.testMethod || "N/A"
 				}`;
 				specTitleCell.font = { bold: true, size: 12 };
 				specTitleCell.alignment = { horizontal: "left" };
+				currentRow++;
 
-				// -------------- Table Data --------------
+				// --- Table Data ---
 				const tableData = specimen.tableData || [];
 				if (tableData.length > 0) {
+					// Determine the columns (skipping any "images" field)
 					const columns = Object.keys(tableData[0]).filter(
 						(col) => col.toLowerCase() !== "images"
 					);
 
-					// We'll place the table header at row 23
-					let tableStartRow = 23;
-					let colStart = 1; // 'A' is col 1 in ExcelJS
-					// Insert header row
+					// Insert table header at the current row
+					let headerRow = currentRow;
 					columns.forEach((colName, idx) => {
-						const cell = worksheet.getCell(tableStartRow, colStart + idx);
+						const cell = worksheet.getCell(headerRow, idx + 1);
 						cell.value = colName;
 						cell.font = { bold: true };
 						cell.alignment = { horizontal: "center" };
@@ -308,13 +227,13 @@ export default function CertificatePreview({
 							fgColor: { argb: "FFDCE6F1" },
 						};
 					});
+					currentRow++;
 
-					// Insert rows
+					// Insert table rows
 					for (let r = 0; r < tableData.length; r++) {
 						const rowObj = tableData[r];
-						const excelRow = worksheet.getRow(tableStartRow + 1 + r);
 						columns.forEach((colName, cIdx) => {
-							const cell = excelRow.getCell(colStart + cIdx);
+							const cell = worksheet.getCell(currentRow, cIdx + 1);
 							cell.value = rowObj[colName] ?? "";
 							cell.alignment = { vertical: "top", wrapText: true };
 							cell.border = {
@@ -324,11 +243,12 @@ export default function CertificatePreview({
 								bottom: { style: "thin" },
 							};
 						});
+						currentRow++;
 					}
 				}
 
-				// -------------- Tested By / Witnessed By --------------
-				let signRow = 25 + tableData.length; // Some offset after the table
+				// --- Tested By / Witnessed By ---
+				let signRow = currentRow;
 				worksheet.getCell(`A${signRow}`).value = "Tested By:";
 				worksheet.getCell(`A${signRow}`).font = { bold: true };
 				worksheet.getCell(`B${signRow}`).value =
@@ -338,19 +258,17 @@ export default function CertificatePreview({
 				worksheet.getCell(`D${signRow}`).font = { bold: true };
 				worksheet.getCell(`E${signRow}`).value =
 					group.footer?.witnessedBy || "N/A";
+				currentRow = signRow + 2;
 
-				// -------------- Disclaimers --------------
-				let disclaimRow = signRow + 2;
-				// We'll merge disclaimers across columns A->H, each line in a separate row
+				// --- Disclaimers ---
 				function setDisclaimer(text) {
-					worksheet.mergeCells(`A${disclaimRow}:H${disclaimRow}`);
-					const cell = worksheet.getCell(`A${disclaimRow}`);
+					worksheet.mergeCells(`A${currentRow}:H${currentRow}`);
+					const cell = worksheet.getCell(`A${currentRow}`);
 					cell.value = text;
 					cell.font = { size: 10 };
 					cell.alignment = { wrapText: true };
-					disclaimRow++;
+					currentRow++;
 				}
-
 				setDisclaimer("Commercial Registration No: 2015253768");
 				setDisclaimer(
 					"All Works and services carried out by GRIPCO Material Testing Saudia..."
@@ -365,24 +283,27 @@ export default function CertificatePreview({
 					"No deviations were observed during the testing process."
 				);
 
-				// Optional: adjust page setup for printing
-				worksheet.pageSetup = {
-					paperSize: 9, // A4
-					orientation: "portrait",
-					fitToPage: true,
-					fitToWidth: 1,
-					fitToHeight: 0,
-					margins: {
-						left: 0.3,
-						right: 0.3,
-						top: 0.5,
-						bottom: 0.5,
-						header: 0,
-						footer: 0,
-					},
-				};
+				// Add an empty row as a separator between certificates
+				currentRow++;
 			}
 		}
+
+		// Optional: adjust page setup for printing on the single worksheet
+		worksheet.pageSetup = {
+			paperSize: 9, // A4
+			orientation: "portrait",
+			fitToPage: true,
+			fitToWidth: 1,
+			fitToHeight: 0,
+			margins: {
+				left: 0.3,
+				right: 0.3,
+				top: 0.5,
+				bottom: 0.5,
+				header: 0,
+				footer: 0,
+			},
+		};
 
 		// 3) Write the workbook to a file for download
 		const buffer = await workbook.xlsx.writeBuffer();
@@ -398,6 +319,80 @@ export default function CertificatePreview({
 		URL.revokeObjectURL(url);
 	};
 
+	// -----------------------
+	//   2) PDF Download
+	// -----------------------
+	const downloadPdf = async () => {
+		const certificateElement = document.getElementById("certificate-content");
+		if (!certificateElement) return;
+
+		setIsDownloading(true);
+		const canvas = await html2canvas(certificateElement, {
+			scale: 2,
+			useCORS: true,
+		});
+		const canvasWidth = canvas.width;
+		const canvasHeight = canvas.height;
+
+		// Create a new jsPDF instance (A4 size)
+		const pdf = new jsPDF({
+			orientation: "portrait",
+			unit: "in",
+			format: "a4",
+		});
+		const pdfWidth = pdf.internal.pageSize.getWidth();
+		const pdfHeight = pdf.internal.pageSize.getHeight();
+
+		// Determine the height (in canvas pixels) corresponding to one PDF page.
+		const segmentHeight = (pdfHeight * canvasWidth) / pdfWidth;
+		const totalSegments = Math.ceil(canvasHeight / segmentHeight);
+
+		// Loop over each segment (page)
+		for (let i = 0; i < totalSegments; i++) {
+			let currentSegmentHeight = segmentHeight;
+			if (i === totalSegments - 1) {
+				currentSegmentHeight = canvasHeight - i * segmentHeight;
+			}
+
+			// Create a temporary canvas to hold this segment
+			const segmentCanvas = document.createElement("canvas");
+			segmentCanvas.width = canvasWidth;
+			segmentCanvas.height = currentSegmentHeight;
+			const segmentCtx = segmentCanvas.getContext("2d");
+
+			// Draw the current segment from the main canvas into the temporary canvas.
+			segmentCtx.drawImage(
+				canvas,
+				0,
+				i * segmentHeight, // source y coordinate
+				canvasWidth,
+				currentSegmentHeight, // source height
+				0,
+				0,
+				canvasWidth,
+				currentSegmentHeight // destination height
+			);
+
+			const segmentDataUrl = segmentCanvas.toDataURL("image/png");
+
+			if (i > 0) pdf.addPage();
+
+			const renderedSegmentHeight =
+				(currentSegmentHeight * pdfWidth) / canvasWidth;
+			pdf.addImage(
+				segmentDataUrl,
+				"PNG",
+				0,
+				0,
+				pdfWidth,
+				renderedSegmentHeight
+			);
+		}
+
+		pdf.save("certificate.pdf");
+		setIsDownloading(false);
+	};
+
 	if (loading) return <p>Loading...</p>;
 	if (!certificateData) return <p>Certificate not found.</p>;
 
@@ -405,31 +400,32 @@ export default function CertificatePreview({
 		<div className="container mx-auto p-4">
 			{showButton && (
 				<div className="flex space-x-2 justify-end mb-4">
-					<Button onClick={downloadExcel}>Download Excel</Button>
+					{/* <Button onClick={downloadExcel}>Download Excel</Button> */}
+					<Button disabled={isDownloading} onClick={downloadPdf}>
+						{isDownloading ? "Downloading..." : "Download PDF"}
+					</Button>
 				</div>
 			)}
 			<div id="certificate-content">
 				{certificateData.groups?.map((group, groupIdx) => (
 					<div key={`group-${groupIdx}`} className="mb-8">
-						{group.specimenSections?.map((specimen, specimenIdx) => {
-							return (
-								<div
-									key={`group-${groupIdx}-specimen-${specimenIdx}`}
-									className="mb-6 rounded">
-									{/* Render your HTML/React certificate preview here */}
-									<Certificate
-										certificate={certificateData}
-										group={{
-											...group,
-											tableData: specimen.tableData,
-											specimenId: specimen.specimenId,
-										}}
-										pageStyle={pageBreakStyle}
-										hideImageColumn={true}
-									/>
-								</div>
-							);
-						})}
+						{group.specimenSections?.map((specimen, specimenIdx) => (
+							<div
+								key={`group-${groupIdx}-specimen-${specimenIdx}`}
+								className="mb-6 rounded">
+								{/* Render your HTML/React certificate preview here */}
+								<Certificate
+									certificate={certificateData}
+									group={{
+										...group,
+										tableData: specimen.tableData,
+										specimenId: specimen.specimenId,
+									}}
+									pageStyle={pageBreakStyle}
+									hideImageColumn={true}
+								/>
+							</div>
+						))}
 					</div>
 				))}
 			</div>

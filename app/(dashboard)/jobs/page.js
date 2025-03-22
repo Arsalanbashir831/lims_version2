@@ -101,7 +101,7 @@ const SampleLotsPage = () => {
 	// Row-specific Excel download callback remains unchanged.
 	const handleDownload = async (row) => {
 		try {
-			const dataUrl = await getBase64FromUrl("/logo.png");
+			const dataUrl = await getBase64FromUrl("/logo.jpg");
 			const base64String = dataUrl.split("base64,")[1];
 			const rightLogoUrl = await getBase64FromUrl("/ias_logo.jpg");
 			const rightLogoBase64String = rightLogoUrl.split("base64,")[1];

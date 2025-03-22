@@ -117,7 +117,7 @@ const ProficiencyTestingPage = () => {
 		}
 	};
 
-	// Convert static image (/logo.png) to Base64 for the Excel export
+	// Convert static image (/logo.jpg) to Base64 for the Excel export
 	const convertImageToBase64 = async (imagePath) => {
 		const response = await fetch(imagePath);
 		const blob = await response.blob();
@@ -130,7 +130,7 @@ const ProficiencyTestingPage = () => {
 
 	const handleDownloadExcel = async () => {
 		try {
-			const logoBase64 = await convertImageToBase64("/logo.png");
+			const logoBase64 = await convertImageToBase64("/logo.jpg");
 			const response = await fetch("/api/export-excel", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -139,7 +139,7 @@ const ProficiencyTestingPage = () => {
 					data,
 					fileName,
 					logoBase64,
-					imagePath: "logo.png",
+					imagePath: "logo.jpg",
 				}),
 			});
 

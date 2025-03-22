@@ -39,29 +39,49 @@ export default function Certificate({ certificate, group, pageStyle }) {
 			: [];
 
 	return (
-		<Card className="mt-4 gap-0" style={pageStyle}>
+		<Card className="mt-4 gap-0 certificate-page" style={pageStyle}>
 			{/* TOP BAR WITH LOGOS */}
 			<CardHeader>
 				<div className="flex justify-between items-start">
 					{/* Left: GRIPCO logo */}
 					<div className="relative w-64">
-						<Image
+						{/* <Image
 							src="/logo.jpg"
 							alt="GRIPCO Logo"
 							width={400}
 							height={400}
 							className="object-contain"
+						/> */}
+						<div
+							style={{
+								width: "200px",
+								height: "100px",
+								backgroundImage: `url(/logo.jpg)`,
+								backgroundSize: "contain",
+								backgroundRepeat: "no-repeat",
+								backgroundPosition: "center",
+							}}
 						/>
 					</div>
 					{/* Right: IAS logo & QR code */}
 					<div className="flex items-start gap-2">
 						{/* IAS logo */}
-						<Image
+						{/* <Image
 							src="/ias_logo.jpg"
 							alt="IAS"
 							width={80}
 							height={80}
 							className="object-contain"
+						/> */}
+						<div
+							style={{
+								width: "100px",
+								height: "100px",
+								backgroundImage: `url(/ias_logo.jpg)`,
+								backgroundSize: "contain",
+								backgroundRepeat: "no-repeat",
+								backgroundPosition: "center",
+							}}
 						/>
 						{/* Small QR code that points to the live preview URL */}
 						<QRCode
@@ -183,14 +203,26 @@ export default function Certificate({ certificate, group, pageStyle }) {
 				{images.length > 0 && (
 					<div className="mt-4">
 						{/* <h4 className="font-semibold mb-2">Images:</h4> */}
-						<div className="flex flex-wrap gap-4">
+						<div className="flex flex-col items-center justify-center flex-wrap gap-4">
 							{images.map((imgUrl, idx) => (
-								<img
-									key={idx}
-									src={imgUrl}
-									alt={`Specimen ${specimenId} Image ${idx + 1}`}
-									className="max-w-xs object-contain border rounded"
-								/>
+								// <div
+								// 	key={idx}
+								// 	className="w-3/4 h-64 border rounded"
+								// 	style={{
+								// 		backgroundImage: `url(${imgUrl})`,
+								// 		backgroundSize: "contain",
+								// 		backgroundRepeat: "no-repeat",
+								// 		backgroundPosition: "center",
+								// 	}}
+								// />
+								<div key={idx} className="w-full h-64 relative">
+									<Image
+										src={imgUrl}
+										alt={`Specimen ${specimenId} Image ${idx + 1}`}
+										className="max-w-xs object-contain border rounded"
+										fill
+									/>
+								</div>
 							))}
 						</div>
 					</div>

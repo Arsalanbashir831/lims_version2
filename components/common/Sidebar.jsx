@@ -76,7 +76,7 @@ export default function Sidebar() {
 		} else {
 			toast.success("Successfully logged out!");
 			// Redirect to login page or home
-			router.push("/auth/login");
+			router.push(ROUTES.AUTH.LOGIN);
 		}
 	};
 

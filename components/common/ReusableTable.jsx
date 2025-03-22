@@ -7,6 +7,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Pencil, Trash } from "lucide-react";
 
 const ReusableTable = ({ columns, data, onEdit, onDelete }) => {
 	return (
@@ -35,15 +36,16 @@ const ReusableTable = ({ columns, data, onEdit, onDelete }) => {
 									<Button
 										size="sm"
 										variant="outline"
-										className="mr-2"
-										onClick={() => onEdit(rowIndex)}>
-										Edit
+										onClick={() => onEdit(rowIndex)}
+										className="mr-2 bg-green-500 text-white hover:bg-green-600">
+										<Pencil className="w-4 h-4" />
 									</Button>
 									<Button
 										size="sm"
 										variant="destructive"
-										onClick={() => onDelete(rowIndex)}>
-										Delete
+										onClick={() => onDelete(rowIndex)}
+										className="bg-red-500 text-white hover:bg-red-600">
+										<Trash className="w-4 h-4" />
 									</Button>
 								</TableCell>
 							</TableRow>
