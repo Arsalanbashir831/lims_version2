@@ -20,6 +20,7 @@ import {
 	deleteDoc,
 	doc,
 } from "firebase/firestore";
+import { IASLogo } from "@/components/common/IASLogo";
 
 const ProficiencyTestingPage = () => {
 	const columns = [
@@ -162,9 +163,12 @@ const ProficiencyTestingPage = () => {
 
 	return (
 		<div className="p-6 container mx-auto bg-gray-100 min-h-screen">
-			<h1 className="text-2xl font-semibold text-gray-800 mb-6">
-				Proficiency Testing
-			</h1>
+			<div className="flex justify-between items-end mb-6">
+				<h1 className="text-2xl font-semibold text-gray-800 mb-6">
+					Proficiency Testing
+				</h1>
+				<IASLogo />
+			</div>
 
 			<div className="flex justify-between items-center mb-4">
 				<div className="flex items-center gap-2">

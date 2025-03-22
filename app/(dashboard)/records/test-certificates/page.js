@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import ReusableTable from "@/components/common/ReusableTable";
+import { IASLogo } from "@/components/common/IASLogo";
 
 const Page = () => {
 	const router = useRouter();
@@ -43,9 +44,12 @@ const Page = () => {
 	return (
 		<div className="p-6 bg-gray-100 min-h-screen">
 			<div className="max-w-6xl mx-auto">
-				<h1 className="text-3xl font-bold text-gray-800 mb-4">
-					Lab Test Records
-				</h1>
+				<div className="flex justify-between items-end mb-6">
+					<h1 className="text-2xl font-semibold text-gray-800 mb-6">
+						Lab Test Records
+					</h1>
+					<IASLogo />
+				</div>
 				<p className="text-gray-600 mb-6">
 					Overview of all sample records with associated job information.
 				</p>

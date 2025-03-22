@@ -15,6 +15,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Eye, Pencil, Trash } from "lucide-react";
+import { IASLogo } from "@/components/common/IASLogo";
 
 function CertificatesPage() {
 	const router = useRouter();
@@ -99,7 +100,12 @@ function CertificatesPage() {
 
 	return (
 		<div className="container mx-auto p-4 sm:p-6 lg:p-8 md:max-w-5xl">
-			<h1 className="text-2xl font-bold mb-4">Certificates</h1>
+			<div className="flex justify-between items-end mb-6">
+				<h1 className="text-2xl font-semibold text-gray-800 mb-6">
+					Certificates
+				</h1>
+				<IASLogo />
+			</div>
 			{/* Certificates Table */}
 			<div className="overflow-x-auto">
 				<Table>

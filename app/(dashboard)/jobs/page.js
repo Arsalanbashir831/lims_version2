@@ -8,6 +8,7 @@ import { Plus, Trash } from "lucide-react";
 import ReusableSampleLotsTable from "@/components/common/ReusableSlotsTable";
 import { getBase64FromUrl } from "@/lib/utils";
 import { toast } from "sonner";
+import { IASLogo } from "@/components/common/IASLogo";
 
 const SampleLotsPage = () => {
 	// Table columns – these keys should exist at the top level of each job record.
@@ -212,9 +213,12 @@ const SampleLotsPage = () => {
 	return (
 		<div className="p-6 bg-gray-100 min-h-screen">
 			<div className="mx-auto container">
-				<h1 className="text-2xl font-semibold text-gray-800 mb-6">
-					Job Records
-				</h1>
+				<div className="flex justify-between items-end mb-6">
+					<h1 className="text-2xl font-semibold text-gray-800 mb-6">
+						Job Records
+					</h1>
+					<IASLogo />
+				</div>
 				<ReusableSampleLotsTable
 					columns={columns}
 					data={data}

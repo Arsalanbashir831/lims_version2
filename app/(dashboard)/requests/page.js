@@ -26,6 +26,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import SpecimenIdInput from "@/components/common/SpecimenIdInput";
 import { getBase64FromUrl } from "@/lib/utils";
+import { IASLogo } from "@/components/common/IASLogo";
 
 // Define the table columns for the main list.
 const columns = [
@@ -298,9 +299,12 @@ function SubmittedRequestsPage() {
 
 	return (
 		<div className="container mx-auto p-4 sm:p-6 lg:p-8">
-			<h1 className="text-2xl font-bold mb-4">
-				Sample and Testing Request Database
-			</h1>
+			<div className="flex justify-between items-end mb-6">
+				<h1 className="text-2xl font-semibold text-gray-800 mb-6">
+					Sample and Testing Request Database
+				</h1>
+				<IASLogo />
+			</div>
 			<ReusableSampleLotsTable
 				columns={columns}
 				data={data}
