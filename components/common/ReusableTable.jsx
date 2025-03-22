@@ -11,7 +11,7 @@ import { Pencil, Trash } from "lucide-react";
 
 const ReusableTable = ({ columns, data, onEdit, onDelete }) => {
 	return (
-		<div className="overflow-x-auto border rounded-lg shadow-md bg-white md:max-w-4xl mx-auto">
+		<div className="overflow-x-auto border rounded-lg shadow-md bg-white md:max-w-6xl mx-auto">
 			<Table>
 				<TableHeader>
 					<TableRow className="bg-gray-200 text-gray-700 font-semibold">

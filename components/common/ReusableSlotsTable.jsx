@@ -21,7 +21,7 @@ const ReusableSampleLotsTable = ({
 	onDownload,
 }) => {
 	return (
-		<div className="overflow-x-auto bg-white shadow-md rounded-lg md:max-w-4xl mx-auto">
+		<div className="overflow-x-auto bg-white shadow-md rounded-lg md:max-w-6xl mx-auto">
 			<Table className="w-full">
 				<TableHeader>
 					<TableRow className="bg-gray-200">

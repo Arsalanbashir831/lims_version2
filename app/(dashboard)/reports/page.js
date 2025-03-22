@@ -99,7 +99,7 @@ function CertificatesPage() {
 	];
 
 	return (
-		<div className="container mx-auto p-4 sm:p-6 lg:p-8 md:max-w-5xl">
+		<div className="container mx-auto p-4 sm:p-6 lg:p-8 md:max-w-6xl">
 			<div className="flex justify-between items-end mb-6">
 				<h1 className="text-2xl font-semibold text-gray-800 mb-6">
 					Certificates
@@ -107,7 +107,7 @@ function CertificatesPage() {
 				<IASLogo />
 			</div>
 			{/* Certificates Table */}
-			<div className="overflow-x-auto">
+			<div className="overflow-x-auto ">
 				<Table>
 					<TableHeader className="bg-gray-200">
 						<TableRow>
