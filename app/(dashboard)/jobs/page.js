@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Trash } from "lucide-react";
+import { Trash } from "lucide-react";
 import ReusableSampleLotsTable from "@/components/common/ReusableSlotsTable";
 import { getBase64FromUrl } from "@/lib/utils";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { IASLogo } from "@/components/common/IASLogo";
 
 const SampleLotsPage = () => {
@@ -23,9 +23,8 @@ const SampleLotsPage = () => {
 
 	const [data, setData] = useState([]);
 	const [selectedRow, setSelectedRow] = useState(null);
-	const [dialogMode, setDialogMode] = useState("preview");
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
-	const [editRow, setEditRow] = useState(null);
+	const router = useRouter();
 
 	// Fetch job records from the API and flatten the nested sample object.
 	const fetchJobs = async () => {
@@ -45,7 +44,6 @@ const SampleLotsPage = () => {
 						noItems: job.sampleDetails ? job.sampleDetails.length : 0,
 						endUser: sample.endUser,
 						sampleDetails: job.sampleDetails,
-						// Optionally include other fields if needed
 					};
 				});
 				setData(flattenedJobs);
@@ -65,19 +63,12 @@ const SampleLotsPage = () => {
 	// Open preview dialog
 	const handlePreview = (row) => {
 		setSelectedRow(row);
-		setDialogMode("preview");
 		setIsDialogOpen(true);
 	};
 
-	// Open edit dialog (clone row)
+	// Navigate to edit page when edit is clicked
 	const handleEdit = (row) => {
-		setSelectedRow(row);
-		setEditRow({
-			...row,
-			sampleDetails: row.sampleDetails ? [...row.sampleDetails] : [],
-		});
-		setDialogMode("edit");
-		setIsDialogOpen(true);
+		router.push(`/jobs/${row.id}`);
 	};
 
 	// Call API to delete a job and refresh the list
@@ -96,8 +87,6 @@ const SampleLotsPage = () => {
 			toast.error("Error deleting job.");
 		}
 	};
-
-	console.log("data", data);
 
 	// Row-specific Excel download callback remains unchanged.
 	const handleDownload = async (row) => {
@@ -126,8 +115,6 @@ const SampleLotsPage = () => {
 				})),
 			};
 
-			console.log("payload", payload);
-
 			const response = await fetch("/api/sample-export-excel", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -149,67 +136,6 @@ const SampleLotsPage = () => {
 		}
 	};
 
-	// Handle changes in edit mode; update the editRow state.
-	const handleChangeEdit = (e) => {
-		const { name, value } = e.target;
-		setEditRow({ ...editRow, [name]: value });
-	};
-
-	// Save changes in edit mode by calling the API endpoint for update.
-	const handleSaveEdit = async () => {
-		try {
-			const res = await fetch(`/api/jobs/${editRow.id}`, {
-				method: "PUT",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify(editRow),
-			});
-			const json = await res.json();
-			if (res.ok) {
-				toast.success("Job updated successfully");
-				setIsDialogOpen(false);
-				fetchJobs();
-			} else {
-				toast.error(json.error || "Failed to update job");
-			}
-		} catch (error) {
-			console.error("Error updating job:", error);
-			toast.error("Error updating job.");
-		}
-	};
-
-	// Handle changes in sample details rows during edit mode.
-	const handleDetailChange = (index, e) => {
-		const { name, value } = e.target;
-		const updatedDetails = [...editRow.sampleDetails];
-		updatedDetails[index] = { ...updatedDetails[index], [name]: value };
-		setEditRow({ ...editRow, sampleDetails: updatedDetails });
-	};
-
-	const addDetailRow = () => {
-		setEditRow({
-			...editRow,
-			sampleDetails: [
-				...editRow.sampleDetails,
-				{
-					description: "",
-					mtcNo: "",
-					sampleType: "",
-					materialType: "",
-					heatNo: "",
-					condition: "",
-					testMethods: [],
-				},
-			],
-		});
-	};
-
-	const removeDetailRow = (index) => {
-		setEditRow({
-			...editRow,
-			sampleDetails: editRow.sampleDetails.filter((_, i) => i !== index),
-		});
-	};
-
 	return (
 		<div className="p-6 bg-gray-100 min-h-screen">
 			<div className="mx-auto container">
@@ -229,15 +155,13 @@ const SampleLotsPage = () => {
 				/>
 			</div>
 
+			{/* Preview dialog remains available */}
 			<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
 				<DialogContent className="p-6 !max-w-3xl mx-auto">
 					<DialogTitle className="text-center text-xl font-bold mb-4">
-						{dialogMode === "preview"
-							? "Preview Job Record"
-							: "Edit Job Record"}
+						Preview Job Record
 					</DialogTitle>
-
-					{dialogMode === "preview" && selectedRow && (
+					{selectedRow && (
 						<div className="space-y-4">
 							{columns.map((col) => (
 								<div key={col.key} className="flex justify-between">
@@ -282,136 +206,6 @@ const SampleLotsPage = () => {
 							)}
 							<div className="flex justify-end mt-4">
 								<Button onClick={() => setIsDialogOpen(false)}>Close</Button>
-							</div>
-						</div>
-					)}
-
-					{dialogMode === "edit" && editRow && (
-						<div className="space-y-6">
-							<div className="grid grid-cols-2 gap-4">
-								{columns.map((col) =>
-									col.key !== "noItems" ? (
-										<div key={col.key} className="flex flex-col">
-											<label className="font-medium">{col.label}:</label>
-											<Input
-												name={col.key}
-												value={editRow[col.key] || ""}
-												onChange={handleChangeEdit}
-											/>
-										</div>
-									) : null
-								)}
-							</div>
-
-							<div>
-								<h3 className="font-medium mb-2">Sample Details</h3>
-								<table className="w-full border-collapse">
-									<thead className="bg-gray-200">
-										<tr>
-											<th className="p-2 border">Description</th>
-											<th className="p-2 border">MTC No</th>
-											<th className="p-2 border">Sample Type</th>
-											<th className="p-2 border">Material Type</th>
-											<th className="p-2 border">Heat No</th>
-											<th className="p-2 border">Condition</th>
-											<th className="p-2 border">Test Methods</th>
-											<th className="p-2 border">Actions</th>
-										</tr>
-									</thead>
-									<tbody>
-										{editRow.sampleDetails.map((detail, index) => (
-											<tr key={index} className="border-b">
-												<td className="p-2 border">
-													<Input
-														name="description"
-														value={detail.description}
-														onChange={(e) => handleDetailChange(index, e)}
-													/>
-												</td>
-												<td className="p-2 border">
-													<Input
-														name="mtcNo"
-														value={detail.mtcNo}
-														onChange={(e) => handleDetailChange(index, e)}
-													/>
-												</td>
-												<td className="p-2 border">
-													<Input
-														name="sampleType"
-														value={detail.sampleType}
-														onChange={(e) => handleDetailChange(index, e)}
-													/>
-												</td>
-												<td className="p-2 border">
-													<Input
-														name="materialType"
-														value={detail.materialType}
-														onChange={(e) => handleDetailChange(index, e)}
-													/>
-												</td>
-												<td className="p-2 border">
-													<Input
-														name="heatNo"
-														value={detail.heatNo}
-														onChange={(e) => handleDetailChange(index, e)}
-													/>
-												</td>
-												<td className="p-2 border">
-													<Input
-														name="condition"
-														value={detail.condition}
-														onChange={(e) => handleDetailChange(index, e)}
-													/>
-												</td>
-												<td className="p-2 border">
-													<Input
-														name="testMethods"
-														value={detail.testMethods
-															?.map((tm) => tm.test_name)
-															.join(", ")}
-														onChange={(e) => {
-															const updatedValue = e.target.value
-																.split(",")
-																.map((item) => item.trim());
-															handleDetailChange(index, {
-																target: {
-																	name: "testMethods",
-																	value: updatedValue,
-																},
-															});
-														}}
-													/>
-												</td>
-												<td className="p-2 border text-center">
-													<Button
-														variant="outline"
-														onClick={() => removeDetailRow(index)}
-														className="bg-red-500 text-white hover:bg-red-600">
-														<Trash className="w-4 h-4" />
-													</Button>
-												</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
-								<Button
-									onClick={addDetailRow}
-									className="mt-3 bg-green-600 hover:bg-green-700 text-white w-full">
-									<Plus className="w-4 h-4 mr-2" /> Add Another Row
-								</Button>
-							</div>
-
-							<div className="flex justify-end mt-4 gap-2">
-								<Button
-									variant="outline"
-									onClick={() => setIsDialogOpen(false)}>
-									Cancel
-								</Button>
-								<Button
-									className="bg-green-600 hover:bg-green-700 text-white"
-									onClick={handleSaveEdit}>
-									Save Changes
-								</Button>
 							</div>
 						</div>
 					)}

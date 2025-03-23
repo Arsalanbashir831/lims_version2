@@ -87,7 +87,6 @@ const SampleDetailRow = ({
 			{/* MTC No. */}
 			<TableCell className="p-2">
 				<Input
-					type="number"
 					name="mtcNo"
 					value={detail.mtcNo}
 					onChange={handleChange}
@@ -108,7 +107,17 @@ const SampleDetailRow = ({
 							{type}
 						</option>
 					))}
+					<option value="Other">Other</option>
 				</select>
+				{detail.sampleType === "Other" && (
+					<Input
+						name="customSampleType"
+						value={detail.customSampleType || ""}
+						onChange={handleChange}
+						placeholder="Enter custom sample type"
+						className="mt-2 w-full"
+					/>
+				)}
 			</TableCell>
 			{/* Material Type */}
 			<TableCell className="p-2">
@@ -128,7 +137,6 @@ const SampleDetailRow = ({
 			{/* Heat No. */}
 			<TableCell className="p-2">
 				<Input
-					type="number"
 					name="heatNo"
 					value={detail.heatNo}
 					onChange={handleChange}
@@ -220,9 +228,13 @@ const SampleDetailsTable = ({
 	</div>
 );
 
-const SampleLotForm = () => {
+const SampleLotForm = ({
+	initialSample = null,
+	initialSampleDetails = null,
+	jobDocId = null,
+}) => {
 	const router = useRouter();
-	// Add a jobId field to the sample (to be generated on the server)
+	// Default sample for a new job lot
 	const defaultSample = {
 		clientName: "",
 		projectName: "",
@@ -233,23 +245,42 @@ const SampleLotForm = () => {
 		remarks: "",
 	};
 
-	// Each sample detail now includes an itemNo field for a unique item code.
+	// Default sample details
 	const defaultDetails = [
 		{
-			itemNo: "", // Will be set by the API to something like "MTL-2025-0001-001"
+			itemNo: "",
 			description: "",
 			mtcNo: "",
 			sampleType: "",
+			customSampleType: "",
 			materialType: "",
 			heatNo: "",
 			condition: "",
-			// Test methods will only include test_id and test_name
 			testMethods: [],
 		},
 	];
 
-	const [sample, setSample] = useState(defaultSample);
-	const [sampleDetails, setSampleDetails] = useState(defaultDetails);
+	// Initialize sample details with transformation: if initial sample type doesn't match, set as "Other"
+	const [sampleDetails, setSampleDetails] = useState(() => {
+		if (initialSampleDetails) {
+			return initialSampleDetails.map((detail) => {
+				if (detail.sampleType && !typeOfSamples.includes(detail.sampleType)) {
+					return {
+						...detail,
+						customSampleType: detail.sampleType,
+						sampleType: "Other",
+					};
+				}
+				return detail;
+			});
+		}
+		return defaultDetails;
+	});
+
+	// Use initial sample if provided or default sample
+	const [sample, setSample] = useState(
+		initialSample ? initialSample : defaultSample
+	);
 
 	const handleDetailChange = (index, e) => {
 		const { name, value } = e.target;
@@ -277,6 +308,7 @@ const SampleLotForm = () => {
 				description: "",
 				mtcNo: "",
 				sampleType: "",
+				customSampleType: "",
 				materialType: "",
 				heatNo: "",
 				condition: "",
@@ -294,31 +326,55 @@ const SampleLotForm = () => {
 		setSample({ ...sample, [e.target.name]: e.target.value });
 	};
 
-	// Call an API endpoint to create a new sample lot.
-	// The API is responsible for generating a unique Job ID and unique item numbers.
+	// Submit handler – if jobDocId exists, update the job; otherwise, create a new sample lot.
 	const handleSubmit = async () => {
 		try {
-			// Optionally, you can perform transformation here if needed
-			const response = await fetch("/api/jobs/new", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ sample, sampleDetails }),
+			// Transform sampleDetails: if sampleType is "Other", use the customSampleType value.
+			const transformedSampleDetails = sampleDetails.map((detail) => {
+				const effectiveSampleType =
+					detail.sampleType === "Other"
+						? detail.customSampleType
+						: detail.sampleType;
+				// Optionally, omit customSampleType from the payload.
+				const { customSampleType, ...rest } = detail;
+				return { ...rest, sampleType: effectiveSampleType };
 			});
+
+			const endpoint = jobDocId ? `/api/jobs/${jobDocId}` : "/api/jobs/new";
+			const method = jobDocId ? "PUT" : "POST";
+
+			const response = await fetch(endpoint, {
+				method: method,
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					sample,
+					sampleDetails: transformedSampleDetails,
+				}),
+			});
+
 			if (!response.ok) {
-				throw new Error("Failed to add sample lot");
+				throw new Error(
+					jobDocId ? "Failed to update sample lot" : "Failed to add sample lot"
+				);
 			}
+
 			// The API response might include the generated jobId and updated sampleDetails.
 			const result = await response.json();
-			toast.success("Job added successfully");
-			// Optionally update the sample with the generated jobId:
-			// setSample({ ...sample, jobId: result.jobId });
+			toast.success(
+				jobDocId ? "Job updated successfully" : "Job added successfully"
+			);
 			// Reset the form after successful submission
 			setSample(defaultSample);
 			setSampleDetails(defaultDetails);
 			router.push(ROUTES.DASHBOARD.JOBS.INDEX);
 		} catch (error) {
-			console.error("Error adding sample lot:", error);
-			toast.error("Error adding sample lot.");
+			console.error(
+				jobDocId ? "Error updating sample lot:" : "Error adding sample lot:",
+				error
+			);
+			toast.error(
+				jobDocId ? "Error updating sample lot." : "Error adding sample lot."
+			);
 		}
 	};
 
@@ -398,7 +454,7 @@ const SampleLotForm = () => {
 			<Button
 				onClick={handleSubmit}
 				className="w-full bg-blue-600 mt-6 hover:bg-blue-700 text-white">
-				Add Sample
+				{jobDocId ? "Save Changes" : "Add Sample"}
 			</Button>
 		</div>
 	);
