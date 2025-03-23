@@ -22,6 +22,7 @@ import {
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/config/firebase-config";
+import { useRouter } from "next/navigation";
 
 const certificateFields = [
 	{ key: "dateOfSampling", label: "Date of Sampling", type: "date" },
@@ -48,6 +49,7 @@ const certificateFields = [
 ];
 
 function ReportForm({ initialData }) {
+	const router = useRouter();
 	// In edit mode, initialData should have a "certificate" property.
 	const certificateData = initialData?.certificate || null;
 	const isEditMode = Boolean(certificateData);
@@ -822,6 +824,7 @@ function ReportForm({ initialData }) {
 			}
 			const result = await response.json();
 			console.log("Submission result:", result);
+			router.push("/reports");
 		} catch (error) {
 			console.error("Error submitting data:", error);
 		} finally {

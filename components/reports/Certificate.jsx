@@ -16,6 +16,7 @@ import QRCode from "react-qr-code";
 export default function Certificate({ certificate, group, pageStyle }) {
 	// Top-level fields in the certificate document
 	const {
+		id,
 		requestId,
 		jobId,
 		clientName,
@@ -23,12 +24,13 @@ export default function Certificate({ certificate, group, pageStyle }) {
 		sampleDate,
 		issuanceNumber,
 	} = certificate;
+	console.log("certificate", certificate);
 	// Fields specific to each group/test method
 	const { testMethod, certificateDetails, tableData, footer, specimenId } =
 		group;
 
 	// Example: Construct the live preview URL for your app (adjust domain/path as needed)
-	const livePreviewUrl = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/public/certificate/${requestId}/`;
+	const livePreviewUrl = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/public/certificate/${id}/`;
 
 	// Gather unique image URLs from the table data.
 	const images =
