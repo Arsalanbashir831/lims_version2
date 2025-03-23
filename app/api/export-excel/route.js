@@ -67,43 +67,14 @@ export async function POST(req) {
 		coordinatorCell.alignment = { horizontal: "center", vertical: "middle" };
 		worksheet.getRow(4).height = 20;
 
-		worksheet.getRow(5).height = 5; // Blank spacing row
-
 		worksheet.mergeCells("B6:E6");
-		const statementLabel = worksheet.getCell("B6");
-		statementLabel.value = "Statement:";
-		statementLabel.font = { bold: true, size: 12 };
-		statementLabel.alignment = { horizontal: "center" };
-
-		worksheet.mergeCells("B7:E7");
-		const regCell = worksheet.getCell("B7");
-		regCell.value =
-			"Commercial Registration No: 2015253768 (IAS accredited lab reference # TL-1305)";
-		regCell.font = { size: 11 };
-		regCell.alignment = { horizontal: "center" };
-
-		worksheet.mergeCells("B8:E8");
-		const longStatementCell = worksheet.getCell("B8");
-		longStatementCell.value =
-			"All Works and services carried out by GLOBAL RESOURCES INSPECTION CONTRACTING COMPANY (GRIPCO Material Testing Saudia) " +
-			"are subjected to and conducted with the standard terms and condition of GRIPCO Material Testing Which are available at " +
-			"GRIPCO Site Terms and condition or upon Request. This Document may not be reproduced other than in full except with the " +
-			"prior written approval of the issuing laboratory. This Results relate only to the Item(s) tested sampling conducted by " +
-			"the organization indicated. No deviations were observed during the testing process.";
-		longStatementCell.font = { size: 10 };
-		longStatementCell.alignment = { horizontal: "center", wrapText: true };
-		worksheet.getRow(8).height = 50;
-
-		worksheet.getRow(9).height = 5; // Additional blank spacing
-
-		worksheet.mergeCells("B10:E10");
-		const recordTitle = worksheet.getCell("B10");
+		const recordTitle = worksheet.getCell("B6");
 		recordTitle.value = fileName || "Testing Records";
 		recordTitle.font = { bold: true, size: 12 };
 		recordTitle.alignment = { horizontal: "center" };
 
 		// Write Table Data: Start table at row 11
-		let currentRow = 11;
+		let currentRow = 7;
 		const headerRow = worksheet.getRow(currentRow);
 		columns.forEach((col, idx) => {
 			const cell = headerRow.getCell(idx + 1);
@@ -142,49 +113,95 @@ export async function POST(req) {
 			currentRow++;
 		});
 
-		// Add spacing after table
+		// 11) Footer Section
 		currentRow += 2;
-
-		// Footer Section: Each line in its own merged row (B:E)
-		worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
-		const footerRow1 = worksheet.getCell(`B${currentRow}`);
-		footerRow1.value = "____________________";
-		footerRow1.alignment = { horizontal: "center", vertical: "middle" };
-		footerRow1.font = { bold: true, size: 11 };
+		// Underscores
+		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+		let footerCell1 = worksheet.getCell(`A${currentRow}`);
+		footerCell1.value = "________________________";
+		footerCell1.alignment = { horizontal: "center", vertical: "middle" };
+		footerCell1.font = { bold: true, size: 10 };
 		currentRow++;
 
-		worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
-		const footerRow2 = worksheet.getCell(`B${currentRow}`);
-		footerRow2.value = "LIMS Coordinator on authority of";
-		footerRow2.alignment = { horizontal: "center", vertical: "middle" };
-		footerRow2.font = { bold: true, size: 11 };
+		// LIMS Coordinator line
+		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+		let footerCell2 = worksheet.getCell(`A${currentRow}`);
+		footerCell2.value = "LIMS Coordinator on authority of";
+		footerCell2.alignment = { horizontal: "center", vertical: "middle" };
+		footerCell2.font = { bold: true, size: 10 };
 		currentRow++;
 
-		worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
-		const footerRow3 = worksheet.getCell(`B${currentRow}`);
-		footerRow3.value = "GRIPCO MATERIAL TESTING";
-		footerRow3.alignment = { horizontal: "center", vertical: "middle" };
-		footerRow3.font = { bold: true, size: 11 };
+		// Company name
+		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+		let footerCell3 = worksheet.getCell(`A${currentRow}`);
+		footerCell3.value = "GRIPCO MATERIAL TESTING";
+		footerCell3.alignment = { horizontal: "center", vertical: "middle" };
+		footerCell3.font = { bold: true, size: 10 };
 		currentRow++;
 
 		// Blank row for spacing
-		worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
-		const blankRow = worksheet.getCell(`B${currentRow}`);
-		blankRow.value = "";
+		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+		let spacingRow = worksheet.getCell(`A${currentRow}`);
+		spacingRow.value = "";
 		currentRow++;
 
-		// Footer final statement
-		worksheet.mergeCells(`B${currentRow}:E${currentRow}`);
-		const footerRow4 = worksheet.getCell(`B${currentRow}`);
-		footerRow4.value =
-			"All Works and services carried out by GLOBAL RESOURCES INSPECTION CONTRACTING COMPANY (GRIPCO Material Testing Saudia)... etc.";
-		footerRow4.alignment = {
+		// Another footer line
+		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+		let footerCell5 = worksheet.getCell(`A${currentRow}`);
+		footerCell5.value =
+			"LIMS Coordinator on authority of GRIPCO MATERIAL TESTING";
+		footerCell5.alignment = {
 			horizontal: "center",
 			vertical: "middle",
 			wrapText: true,
 		};
-		footerRow4.font = { bold: true, size: 11 };
-		worksheet.getRow(currentRow).height = 40;
+		footerCell5.font = { bold: true, size: 10 };
+
+		// 12) Append Statement Section at the End with borders
+		currentRow += 2; // additional spacing
+		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+		let newStatementLabel = worksheet.getCell(`A${currentRow}`);
+		newStatementLabel.value = "Statement:";
+		newStatementLabel.font = { bold: true, size: 12 };
+		// Add borders around the statement cell
+		newStatementLabel.border = {
+			top: { style: "thin" },
+			left: { style: "thin" },
+			bottom: { style: "thin" },
+			right: { style: "thin" },
+		};
+		currentRow++;
+
+		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+		let newRegCell = worksheet.getCell(`A${currentRow}`);
+		newRegCell.value =
+			"Commercial Registration No: 2015253768 (IAS accredited lab reference # TL-1305)";
+		newRegCell.font = { size: 11 };
+		newRegCell.border = {
+			top: { style: "thin" },
+			left: { style: "thin" },
+			bottom: { style: "thin" },
+			right: { style: "thin" },
+		};
+		currentRow++;
+
+		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
+		let newLongStatementCell = worksheet.getCell(`A${currentRow}`);
+		newLongStatementCell.value =
+			"All works and services carried out by GLOBAL RESOURCES INSPECTION CONTRACTING COMPANY (GRIPCO Material Testing Saudia) " +
+			"are subjected to and conducted with the standard terms and conditions of GRIPCO MATERIAL TESTING which are available " +
+			"at the GRIPCO Site Terms and Conditions or upon request. This document may not be reproduced other than in full except " +
+			"with the prior written approval of the issuing laboratory. These results relate only to the item(s) tested/sampling " +
+			"conducted by the organization indicated. No deviations were observed during the testing process.";
+		newLongStatementCell.font = { size: 10 };
+		newLongStatementCell.alignment = { wrapText: true };
+		newLongStatementCell.border = {
+			top: { style: "thin" },
+			left: { style: "thin" },
+			bottom: { style: "thin" },
+			right: { style: "thin" },
+		};
+		worksheet.getRow(currentRow).height = 90;
 
 		// Generate Excel file buffer
 		const buffer = await workbook.xlsx.writeBuffer();

@@ -134,11 +134,22 @@ export async function POST(req) {
 		// 9) Insert Sample Details
 		currentRow += 2;
 		if (sampleDetails && sampleDetails.length > 0) {
-			const detailKeys = Object.keys(sampleDetails[0]);
-			// Create header row for details
-			detailKeys.forEach((hdr, idx) => {
+			// Define keys and headers in the desired order.
+			const detailColumns = [
+				{ key: "itemNo", header: "item name" },
+				{ key: "description", header: "Description" },
+				{ key: "mtcNo", header: "MTC No" },
+				{ key: "sampleType", header: "Sample Type" },
+				{ key: "materialType", header: "Material Type" },
+				{ key: "heatNo", header: "Heat No" },
+				{ key: "condition", header: "Condition" },
+				{ key: "testMethods", header: "Test Methods" },
+			];
+
+			// Create header row for details.
+			detailColumns.forEach((col, idx) => {
 				let headerCell = worksheet.getCell(currentRow, idx + 1);
-				headerCell.value = hdr;
+				headerCell.value = col.header;
 				headerCell.font = { bold: true };
 				headerCell.alignment = { horizontal: "center" };
 				headerCell.fill = {
@@ -154,12 +165,12 @@ export async function POST(req) {
 				};
 			});
 
-			// Data rows for sample details
+			// Data rows for sample details.
 			sampleDetails.forEach((detail, detailIdx) => {
 				let rowNumber = currentRow + detailIdx + 1;
-				detailKeys.forEach((colKey, colIndex) => {
+				detailColumns.forEach((col, colIndex) => {
 					let cell = worksheet.getCell(rowNumber, colIndex + 1);
-					cell.value = detail[colKey] || "";
+					cell.value = detail[col.key] || "";
 					cell.border = {
 						top: { style: "thin" },
 						left: { style: "thin" },

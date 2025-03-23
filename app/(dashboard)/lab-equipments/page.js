@@ -21,6 +21,7 @@ import {
 	doc,
 } from "firebase/firestore";
 import { IASLogo } from "@/components/common/IASLogo";
+import { getBase64FromUrl } from "@/lib/utils";
 
 const LabEquipments = () => {
 	const columns = [
@@ -129,10 +130,20 @@ const LabEquipments = () => {
 
 	const handleDownloadExcel = async () => {
 		try {
+			// Convert logo image to Base64
+			const dataUrl = await getBase64FromUrl("/logo.jpg");
+			// Extract the base64 string from the data URL
+			const base64String = dataUrl.split("base64,")[1];
 			const response = await fetch("/api/export-excel", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ columns, data, fileName }),
+				body: JSON.stringify({
+					columns,
+					data,
+					fileName,
+					base64String,
+					imagePath: "logo.jpg",
+				}),
 			});
 
 			if (!response.ok) {
