@@ -26,7 +26,7 @@ export async function GET() {
 		// Add sampleDate from the job's createdAt and enrich each row with its corresponding MTC No,
 		// dateOfTesting (from plannedTestDate), and sampleDescription (from the matching sample detail).
 		const enrichedTestingRequests = testingRequests.map((req) => {
-			const { createdAt, jobId, requestId, rows } = req;
+			const { id, createdAt, jobId, requestId, rows } = req;
 			const job = jobsMap[jobId] || {};
 			const clientName = job.sample?.clientName || "";
 			const projectName = job.sample?.projectName || "";
@@ -52,6 +52,7 @@ export async function GET() {
 			});
 
 			return {
+				id,
 				createdAt,
 				jobId,
 				requestId,

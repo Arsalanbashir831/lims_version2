@@ -157,11 +157,14 @@ function SubmittedRequestsPage() {
 			const result = await res.json();
 			if (result.success) {
 				setData(data.filter((item) => item.id !== row.id));
+				toast.success("Testing request deleted successfully");
 			} else {
 				console.error("Error deleting testing request:", result.error);
+				toast.error("Failed to delete testing request");
 			}
 		} catch (error) {
 			console.error("Error deleting testing request:", error);
+			toast.error("Failed to delete testing request");
 		}
 	};
 
