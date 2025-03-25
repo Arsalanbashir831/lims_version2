@@ -84,7 +84,6 @@ export default function Sidebar() {
 		<div className="flex flex-col w-full bg-gray-900 text-white p-6 shadow-lg h-screen">
 			<h2 className="text-2xl font-bold mb-6">LIMS Dashboard</h2>
 			{/* Navigation items container made scrollable */}
-			{/* <div className="flex-grow overflow-y-auto"> */}
 			<ScrollArea className="flex-grow overflow-y-auto">
 				<nav className="flex flex-col gap-2">
 					{navItems.map((item) =>
@@ -139,7 +138,6 @@ export default function Sidebar() {
 					)}
 				</nav>
 			</ScrollArea>
-			{/* </div> */}
 			<div className="mt-auto flex flex-col gap-2">
 				{personalItems.map((item) =>
 					item.name === "Logout" ? (

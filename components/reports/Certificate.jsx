@@ -24,7 +24,6 @@ export default function Certificate({ certificate, group, pageStyle }) {
 		sampleDate,
 		issuanceNumber,
 	} = certificate;
-	console.log("certificate", certificate);
 	// Fields specific to each group/test method
 	const { testMethod, certificateDetails, tableData, footer, specimenId } =
 		group;
@@ -209,7 +208,7 @@ export default function Certificate({ certificate, group, pageStyle }) {
 							{images.map((imgUrl, idx) => (
 								// <div
 								// 	key={idx}
-								// 	className="w-3/4 h-64 border rounded"
+								// 	className="w-full h-64 rounded"
 								// 	style={{
 								// 		backgroundImage: `url(${imgUrl})`,
 								// 		backgroundSize: "contain",
@@ -217,11 +216,13 @@ export default function Certificate({ certificate, group, pageStyle }) {
 								// 		backgroundPosition: "center",
 								// 	}}
 								// />
-								<div key={idx} className="w-full h-64 relative">
+								<div
+									key={idx}
+									className="w-96 h-64 relative flex items-center justify-center">
 									<Image
 										src={imgUrl}
 										alt={`Specimen ${specimenId} Image ${idx + 1}`}
-										className="max-w-xs object-contain border rounded"
+										className="max-w-xs object-contain object-center rounded"
 										fill
 									/>
 								</div>
