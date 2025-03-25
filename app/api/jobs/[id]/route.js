@@ -21,6 +21,38 @@ export async function PUT(request, { params }) {
 	const { id } = params;
 	try {
 		const updatedData = await request.json();
+
+		// Assume updatedData contains { sample, sampleDetails }
+		const jobId = updatedData.sample?.jobId;
+		if (jobId && Array.isArray(updatedData.sampleDetails)) {
+			let maxSeq = 0;
+			// Find highest sequence number from existing itemNo's.
+			updatedData.sampleDetails.forEach((detail) => {
+				if (detail.itemNo) {
+					// Assuming itemNo format is "MTL-2025-0001-001"
+					const parts = detail.itemNo.split("-");
+					if (parts.length === 4) {
+						const seq = parseInt(parts[3], 10);
+						if (!isNaN(seq) && seq > maxSeq) {
+							maxSeq = seq;
+						}
+					}
+				}
+			});
+
+			// For any detail that doesn't have an itemNo, assign the next sequence.
+			updatedData.sampleDetails = updatedData.sampleDetails.map((detail) => {
+				if (!detail.itemNo || detail.itemNo === "") {
+					maxSeq++;
+					return {
+						...detail,
+						itemNo: `${jobId}-${maxSeq.toString().padStart(3, "0")}`,
+					};
+				}
+				return detail;
+			});
+		}
+
 		const jobRef = doc(db, "jobs", id);
 		await updateDoc(jobRef, updatedData);
 		return NextResponse.json({ success: true });
