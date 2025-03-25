@@ -49,7 +49,7 @@ const LabEquipments = () => {
 	});
 	const [editIndex, setEditIndex] = useState(null);
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
-	const [fileName, setFileName] = useState("Equipment_Inventory.xlsx");
+	const [fileName, setFileName] = useState("Equipment_Inventory_List.xlsx");
 
 	// Fetch equipments from Firestore
 	const fetchEquipments = async () => {
@@ -132,8 +132,10 @@ const LabEquipments = () => {
 		try {
 			// Convert logo image to Base64
 			const dataUrl = await getBase64FromUrl("/logo.jpg");
-			// Extract the base64 string from the data URL
 			const base64String = dataUrl.split("base64,")[1];
+			const rightLogoUrl = await getBase64FromUrl("/ias_logo.jpg");
+			const rightLogoBase64String = rightLogoUrl.split("base64,")[1];
+
 			const response = await fetch("/api/export-excel", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -143,6 +145,8 @@ const LabEquipments = () => {
 					fileName,
 					base64String,
 					imagePath: "logo.jpg",
+					rightLogoBase64String,
+					rightImagePath: "ias_logo.jpg",
 				}),
 			});
 

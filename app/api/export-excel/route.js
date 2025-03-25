@@ -6,75 +6,126 @@ import path from "path";
 export async function POST(req) {
 	try {
 		// Parse request body
-		const { columns, data, fileName, logoBase64, imagePath } = await req.json();
+		const {
+			columns,
+			data,
+			fileName,
+			logoBase64,
+			imagePath,
+			rightLogoBase64,
+			rightImagePath,
+		} = await req.json();
 
 		// Create a new workbook and worksheet
 		const workbook = new ExcelJS.Workbook();
 		const worksheet = workbook.addWorksheet("Records");
 
-		// Set column widths for a professional layout
-		worksheet.columns = [
-			{ header: "A", width: 25 },
-			{ header: "B", width: 40 },
-			{ header: "C", width: 20 },
-			{ header: "D", width: 20 },
-			{ header: "E", width: 20 },
-			{ header: "F", width: 20 },
-		];
-
-		// Process Logo:
-		// Priority: If logoBase64 is provided, use it; else if imagePath is provided, attempt to read from local file.
+		// 2) Attempt to add the left logo. Priority:
+		//    1) If logoBase64 is provided, use that.
+		//    2) Else if imagePath is provided, read from public folder with fs.
 		let logoImageId;
 		if (logoBase64) {
-			// Use base64 directly (make sure to remove any prefix if present)
-			logoImageId = workbook.addImage({ base64: logoBase64, extension: "jpg" });
+			// If we have a Base64 string for left logo
+			const buffer = Buffer.from(logoBase64, "base64");
+			logoImageId = workbook.addImage({ buffer, extension: "png" });
 		} else if (imagePath) {
+			// If environment permits local fs reading
 			const absoluteLogoPath = path.join(process.cwd(), "public", imagePath);
 			if (fs.existsSync(absoluteLogoPath)) {
 				const logoBuffer = fs.readFileSync(absoluteLogoPath);
 				logoImageId = workbook.addImage({
 					buffer: logoBuffer,
-					extension: "jpg",
+					extension: "png",
 				});
 			}
 		}
 
-		// Insert the logo into the worksheet (if available)
+		// 3) Insert the left logo into the worksheet (if found)
 		if (logoImageId !== undefined && logoImageId !== null) {
-			// Merge cells A1:C1 as the image container
-			worksheet.mergeCells("A1:B1");
 			worksheet.addImage(logoImageId, {
 				tl: { col: 0, row: 0 },
-				br: { col: 2, row: 1 },
-				editAs: "oneCell",
+				ext: { width: 350, height: 100 },
 			});
-			worksheet.getRow(1).height = 80;
+			worksheet.getRow(1).height = 120;
+		}
+
+		// 4) Attempt to add the right logo. Priority:
+		//    1) If rightLogoBase64 is provided, use that.
+		//    2) Else if rightImagePath is provided, read from public folder with fs.
+		let rightLogoImageId;
+		if (rightLogoBase64) {
+			const buffer = Buffer.from(rightLogoBase64, "base64");
+			rightLogoImageId = workbook.addImage({ buffer, extension: "png" });
+		} else if (rightImagePath) {
+			const absoluteRightLogoPath = path.join(
+				process.cwd(),
+				"public",
+				rightImagePath
+			);
+			if (fs.existsSync(absoluteRightLogoPath)) {
+				const logoBuffer = fs.readFileSync(absoluteRightLogoPath);
+				rightLogoImageId = workbook.addImage({
+					buffer: logoBuffer,
+					extension: "png",
+				});
+			}
+		}
+
+		// 5) Insert the right logo into the worksheet (if found)
+		if (rightLogoImageId !== undefined && rightLogoImageId !== null) {
+			// Place the right logo in the top right. Column F (0-based index: 5)
+			worksheet.addImage(rightLogoImageId, {
+				tl: { col: 6, row: 0 },
+				ext: { width: 100, height: 100 },
+			});
 		}
 
 		// Create Header Section (start header text at row 3 to avoid overlapping the logo)
-		worksheet.mergeCells("B3:E3");
+		worksheet.mergeCells("B3:F3");
 		const titleCell = worksheet.getCell("B3");
-		titleCell.value = "GRIPCO MATERIAL TESTING";
+		titleCell.value = "GRIPCO MATERIAL TESTING LABORATORY";
 		titleCell.font = { bold: true, size: 16 };
 		titleCell.alignment = { horizontal: "center", vertical: "middle" };
 		worksheet.getRow(3).height = 25;
 
-		worksheet.mergeCells("B4:E4");
-		const coordinatorCell = worksheet.getCell("B4");
-		coordinatorCell.value =
-			"LIMS Coordinator on authority of GRIPCO MATERIAL TESTING";
-		coordinatorCell.font = { bold: true, size: 12 };
-		coordinatorCell.alignment = { horizontal: "center", vertical: "middle" };
-		worksheet.getRow(4).height = 20;
-
-		worksheet.mergeCells("B6:E6");
-		const recordTitle = worksheet.getCell("B6");
-		recordTitle.value = fileName || "Testing Records";
+		worksheet.mergeCells("B5:F5");
+		const recordTitle = worksheet.getCell("B5");
+		recordTitle.value = fileName.split(".")[0];
 		recordTitle.font = { bold: true, size: 12 };
 		recordTitle.alignment = { horizontal: "center" };
 
-		// Write Table Data: Start table at row 11
+		// add updated date next to the title and it must have dynamic width
+		// to fit the date string
+		const updatedDate = worksheet.getCell("G5");
+		updatedDate.value = `Updated: ${new Date().toLocaleDateString()}`;
+		updatedDate.font = { bold: true, size: 10 };
+		updatedDate.alignment = { horizontal: "center" };
+		updatedDate.width = 19;
+
+		// Write Table Data: Start table at row 7
 		let currentRow = 7;
+
+		// Dynamically calculate column widths for the table.
+		const dynamicWidths = columns.map((col) => {
+			// Use header length as initial max.
+			let maxLen = col.label ? col.label.toString().length : 10;
+			// Iterate through each data row to get the max text length.
+			data.forEach((rowObj) => {
+				const cellText = rowObj[col.key] ? rowObj[col.key].toString() : "";
+				if (cellText.length > maxLen) {
+					maxLen = cellText.length;
+				}
+			});
+			// Add extra padding (e.g., 2 characters).
+			return maxLen + 2;
+		});
+
+		// Apply the calculated widths to the worksheet columns.
+		dynamicWidths.forEach((width, idx) => {
+			worksheet.getColumn(idx + 1).width = width;
+		});
+
+		// Create the header row.
 		const headerRow = worksheet.getRow(currentRow);
 		columns.forEach((col, idx) => {
 			const cell = headerRow.getCell(idx + 1);
@@ -96,6 +147,7 @@ export async function POST(req) {
 		headerRow.commit();
 		currentRow++;
 
+		// Write data rows.
 		data.forEach((rowObj) => {
 			const row = worksheet.getRow(currentRow);
 			columns.forEach((col, idx) => {
@@ -126,17 +178,10 @@ export async function POST(req) {
 		// LIMS Coordinator line
 		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
 		let footerCell2 = worksheet.getCell(`A${currentRow}`);
-		footerCell2.value = "LIMS Coordinator on authority of";
+		footerCell2.value =
+			"LIMS Coordinator on authority of GRIPCO MATERIAL TESTING";
 		footerCell2.alignment = { horizontal: "center", vertical: "middle" };
 		footerCell2.font = { bold: true, size: 10 };
-		currentRow++;
-
-		// Company name
-		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
-		let footerCell3 = worksheet.getCell(`A${currentRow}`);
-		footerCell3.value = "GRIPCO MATERIAL TESTING";
-		footerCell3.alignment = { horizontal: "center", vertical: "middle" };
-		footerCell3.font = { bold: true, size: 10 };
 		currentRow++;
 
 		// Blank row for spacing
@@ -145,20 +190,7 @@ export async function POST(req) {
 		spacingRow.value = "";
 		currentRow++;
 
-		// Another footer line
-		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
-		let footerCell5 = worksheet.getCell(`A${currentRow}`);
-		footerCell5.value =
-			"LIMS Coordinator on authority of GRIPCO MATERIAL TESTING";
-		footerCell5.alignment = {
-			horizontal: "center",
-			vertical: "middle",
-			wrapText: true,
-		};
-		footerCell5.font = { bold: true, size: 10 };
-
 		// 12) Append Statement Section at the End with borders
-		currentRow += 2; // additional spacing
 		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
 		let newStatementLabel = worksheet.getCell(`A${currentRow}`);
 		newStatementLabel.value = "Statement:";
@@ -201,7 +233,7 @@ export async function POST(req) {
 			bottom: { style: "thin" },
 			right: { style: "thin" },
 		};
-		worksheet.getRow(currentRow).height = 90;
+		worksheet.getRow(currentRow).height = 110;
 
 		// Generate Excel file buffer
 		const buffer = await workbook.xlsx.writeBuffer();

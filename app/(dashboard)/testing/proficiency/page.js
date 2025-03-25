@@ -21,6 +21,7 @@ import {
 	doc,
 } from "firebase/firestore";
 import { IASLogo } from "@/components/common/IASLogo";
+import { getBase64FromUrl } from "@/lib/utils";
 
 const ProficiencyTestingPage = () => {
 	const columns = [
@@ -50,7 +51,7 @@ const ProficiencyTestingPage = () => {
 	const [newTest, setNewTest] = useState(initialTestState);
 	const [editIndex, setEditIndex] = useState(null);
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
-	const [fileName, setFileName] = useState("Proficiency_Testing.xlsx");
+	const [fileName, setFileName] = useState("Proficiency_Testing_List.xlsx");
 
 	// Fetch proficiency tests from Firestore
 	const fetchTests = async () => {
@@ -131,7 +132,11 @@ const ProficiencyTestingPage = () => {
 
 	const handleDownloadExcel = async () => {
 		try {
-			const logoBase64 = await convertImageToBase64("/logo.jpg");
+			const dataUrl = await getBase64FromUrl("/logo.jpg");
+			const base64String = dataUrl.split("base64,")[1];
+			const rightLogoUrl = await getBase64FromUrl("/ias_logo.jpg");
+			const rightLogoBase64String = rightLogoUrl.split("base64,")[1];
+
 			const response = await fetch("/api/export-excel", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -139,8 +144,10 @@ const ProficiencyTestingPage = () => {
 					columns,
 					data,
 					fileName,
-					logoBase64,
+					base64String,
 					imagePath: "logo.jpg",
+					rightLogoBase64String,
+					rightImagePath: "ias_logo.jpg",
 				}),
 			});
 

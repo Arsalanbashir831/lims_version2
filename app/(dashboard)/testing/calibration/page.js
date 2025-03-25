@@ -53,7 +53,7 @@ const CalibrationTestingPage = () => {
 	const [newTest, setNewTest] = useState(initialTestState);
 	const [editIndex, setEditIndex] = useState(null);
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
-	const [fileName, setFileName] = useState("Calibration_Testing.xlsx");
+	const [fileName, setFileName] = useState("Calibration_Testing_List.xlsx");
 
 	// Fetch calibration tests from Firestore
 	const fetchTests = async () => {
@@ -123,10 +123,11 @@ const CalibrationTestingPage = () => {
 
 	const handleDownloadExcel = async () => {
 		try {
-			// Convert logo image to Base64
 			const dataUrl = await getBase64FromUrl("/logo.jpg");
-			// Extract the base64 string from the data URL
 			const base64String = dataUrl.split("base64,")[1];
+			const rightLogoUrl = await getBase64FromUrl("/ias_logo.jpg");
+			const rightLogoBase64String = rightLogoUrl.split("base64,")[1];
+
 			const response = await fetch("/api/export-excel", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -136,6 +137,8 @@ const CalibrationTestingPage = () => {
 					fileName,
 					base64String,
 					imagePath: "logo.jpg",
+					rightLogoBase64String,
+					rightImagePath: "ias_logo.jpg",
 				}),
 			});
 

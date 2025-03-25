@@ -45,9 +45,9 @@ export async function POST(req) {
 		if (logoImageId !== undefined && logoImageId !== null) {
 			worksheet.addImage(logoImageId, {
 				tl: { col: 0, row: 0 },
-				ext: { width: 350, height: 50 },
+				ext: { width: 350, height: 100 },
 			});
-			worksheet.getRow(1).height = 80;
+			worksheet.getRow(1).height = 120;
 		}
 
 		// 4) Attempt to add the right logo. Priority:
@@ -76,8 +76,8 @@ export async function POST(req) {
 		if (rightLogoImageId !== undefined && rightLogoImageId !== null) {
 			// Place the right logo in the top right. Column F (0-based index: 5)
 			worksheet.addImage(rightLogoImageId, {
-				tl: { col: 5, row: 0 },
-				ext: { width: 100, height: 80 },
+				tl: { col: 7, row: 0 },
+				ext: { width: 100, height: 100 },
 			});
 		}
 
@@ -90,18 +90,11 @@ export async function POST(req) {
 		worksheet.getColumn("F").width = 20;
 
 		// 7) Create header section with merges (without the statement block)
-		worksheet.mergeCells("B1:F1");
-		let headerCell = worksheet.getCell("B1");
-		headerCell.value = "GRIPCO MATERIAL TESTING";
+		worksheet.mergeCells("B2:G2");
+		let headerCell = worksheet.getCell("B2");
+		headerCell.value = "GRIPCO MATERIAL TESTING LABORATORY";
 		headerCell.font = { bold: true, size: 16 };
 		headerCell.alignment = { horizontal: "center", vertical: "middle" };
-
-		worksheet.mergeCells("B2:F2");
-		let subHeaderCell = worksheet.getCell("B2");
-		subHeaderCell.value =
-			"LIMS Coordinator on authority of GRIPCO MATERIAL TESTING";
-		subHeaderCell.font = { bold: true, size: 12 };
-		subHeaderCell.alignment = { horizontal: "center", vertical: "middle" };
 
 		// 8) Insert Sample Info
 		let currentRow = 4;
@@ -146,6 +139,26 @@ export async function POST(req) {
 				{ key: "testMethods", header: "Test Methods" },
 			];
 
+			// Dynamically calculate column widths.
+			const dynamicWidths = detailColumns.map((col) => {
+				// Start with the header's text length.
+				let maxLen = col.header ? col.header.toString().length : 10;
+				// Check each detail row for the maximum length.
+				sampleDetails.forEach((detail) => {
+					const text = detail[col.key] ? detail[col.key].toString() : "";
+					if (text.length > maxLen) {
+						maxLen = text.length;
+					}
+				});
+				// Add extra padding, e.g., 2 characters.
+				return maxLen + 2;
+			});
+
+			// Apply the calculated widths to the worksheet columns.
+			dynamicWidths.forEach((width, idx) => {
+				worksheet.getColumn(idx + 1).width = width;
+			});
+
 			// Create header row for details.
 			detailColumns.forEach((col, idx) => {
 				let headerCell = worksheet.getCell(currentRow, idx + 1);
@@ -165,7 +178,7 @@ export async function POST(req) {
 				};
 			});
 
-			// Data rows for sample details.
+			// Write data rows for sample details.
 			sampleDetails.forEach((detail, detailIdx) => {
 				let rowNumber = currentRow + detailIdx + 1;
 				detailColumns.forEach((col, colIndex) => {
@@ -221,39 +234,13 @@ export async function POST(req) {
 		// LIMS Coordinator line
 		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
 		let footerCell2 = worksheet.getCell(`A${currentRow}`);
-		footerCell2.value = "LIMS Coordinator on authority of";
+		footerCell2.value =
+			"LIMS Coordinator on authority of GRIPCO MATERIAL TESTING";
 		footerCell2.alignment = { horizontal: "center", vertical: "middle" };
 		footerCell2.font = { bold: true, size: 10 };
 		currentRow++;
 
-		// Company name
-		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
-		let footerCell3 = worksheet.getCell(`A${currentRow}`);
-		footerCell3.value = "GRIPCO MATERIAL TESTING";
-		footerCell3.alignment = { horizontal: "center", vertical: "middle" };
-		footerCell3.font = { bold: true, size: 10 };
-		currentRow++;
-
-		// Blank row for spacing
-		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
-		let spacingRow = worksheet.getCell(`A${currentRow}`);
-		spacingRow.value = "";
-		currentRow++;
-
-		// Another footer line
-		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
-		let footerCell5 = worksheet.getCell(`A${currentRow}`);
-		footerCell5.value =
-			"LIMS Coordinator on authority of GRIPCO MATERIAL TESTING";
-		footerCell5.alignment = {
-			horizontal: "center",
-			vertical: "middle",
-			wrapText: true,
-		};
-		footerCell5.font = { bold: true, size: 10 };
-
 		// 12) Append Statement Section at the End with borders
-		currentRow += 2; // additional spacing
 		worksheet.mergeCells(`A${currentRow}:F${currentRow}`);
 		let newStatementLabel = worksheet.getCell(`A${currentRow}`);
 		newStatementLabel.value = "Statement:";
