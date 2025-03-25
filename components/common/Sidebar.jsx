@@ -81,10 +81,12 @@ export default function Sidebar() {
 	};
 
 	const sidebarContent = (
-		<div className="flex flex-col w-full bg-gray-900 text-white p-6 shadow-lg h-screen overflow-hidden">
+		<div className="flex flex-col w-full bg-gray-900 text-white p-6 shadow-lg h-screen">
 			<h2 className="text-2xl font-bold mb-6">LIMS Dashboard</h2>
-			<ScrollArea className="flex-grow">
-				<nav className="flex flex-col gap-2 flex-grow">
+			{/* Navigation items container made scrollable */}
+			{/* <div className="flex-grow overflow-y-auto"> */}
+			<ScrollArea className="flex-grow overflow-y-auto">
+				<nav className="flex flex-col gap-2">
 					{navItems.map((item) =>
 						item.subItems ? (
 							<div key={item.name} className="relative">
@@ -137,6 +139,7 @@ export default function Sidebar() {
 					)}
 				</nav>
 			</ScrollArea>
+			{/* </div> */}
 			<div className="mt-auto flex flex-col gap-2">
 				{personalItems.map((item) =>
 					item.name === "Logout" ? (
@@ -180,7 +183,7 @@ export default function Sidebar() {
 			</Sheet>
 
 			{/* Desktop Sidebar */}
-			<aside className="hidden md:flex w-1/5 max-w-[30%] h-screen overflow-hidden">
+			<aside className="hidden md:flex w-1/5 max-w-[30%] h-screen">
 				{sidebarContent}
 			</aside>
 		</>
