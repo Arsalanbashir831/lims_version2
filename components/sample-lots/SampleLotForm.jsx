@@ -234,6 +234,7 @@ const SampleLotForm = ({
 	jobDocId = null,
 }) => {
 	const router = useRouter();
+	const [isSubmitting, setIsSubmitting] = useState(false);
 	// Default sample for a new job lot
 	const defaultSample = {
 		clientName: "",
@@ -329,6 +330,7 @@ const SampleLotForm = ({
 	// Submit handler – if jobDocId exists, update the job; otherwise, create a new sample lot.
 	const handleSubmit = async () => {
 		try {
+			setIsSubmitting(true);
 			// Transform sampleDetails: if sampleType is "Other", use the customSampleType value.
 			const transformedSampleDetails = sampleDetails.map((detail) => {
 				const effectiveSampleType =
@@ -375,6 +377,8 @@ const SampleLotForm = ({
 			toast.error(
 				jobDocId ? "Error updating sample lot." : "Error adding sample lot."
 			);
+		} finally {
+			setIsSubmitting(false);
 		}
 	};
 
@@ -452,6 +456,7 @@ const SampleLotForm = ({
 				</p>
 			</div>
 			<Button
+				disabled={isSubmitting}
 				onClick={handleSubmit}
 				className="w-full bg-blue-600 mt-6 hover:bg-blue-700 text-white">
 				{jobDocId ? "Save Changes" : "Add Sample"}

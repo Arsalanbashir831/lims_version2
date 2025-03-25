@@ -46,21 +46,51 @@ export async function DELETE(request, { params }) {
 			if (!jobId) {
 				throw new Error("Job ID not found in the job document");
 			}
-			// Extract the year from the jobId
-			// e.g., splitting "MTL-2025-0001" yields ["MTL", "2025", "0001"]
+			// Extract parts from jobId, e.g., "MTL-2025-0001" yields ["MTL", "2025", "0001"]
 			const parts = jobId.split("-");
+			if (parts.length < 3) {
+				throw new Error("Job ID format is incorrect");
+			}
 			const year = parts[1];
+			// Parse the serial part as a number
+			const deletedSerial = parseInt(parts[2], 10);
 			const counterDocId = `jobCounter-${year}`;
 			const counterRef = doc(db, "counters", counterDocId);
 			const counterSnap = await transaction.get(counterRef);
+
 			if (!counterSnap.exists()) {
-				// If counter doc doesn't exist, create it with 0 (or handle as needed)
-				transaction.set(counterRef, { serial: 0 });
+				// If counter doc doesn't exist, create it.
+				// In this case, the deleted job was the only one.
+				transaction.set(counterRef, { serial: 0, freeSerials: [] });
 			} else {
-				const currentSerial = counterSnap.data().serial;
-				// Decrement if greater than zero to avoid negative counters.
-				const newSerial = currentSerial > 0 ? currentSerial - 1 : 0;
-				transaction.update(counterRef, { serial: newSerial });
+				const data = counterSnap.data();
+				let currentSerial = data.serial;
+				// Ensure we have a free list array
+				let freeSerials = Array.isArray(data.freeSerials)
+					? data.freeSerials
+					: [];
+
+				if (deletedSerial === currentSerial) {
+					// If the deleted job is the highest allocated, decrement the counter.
+					currentSerial = currentSerial - 1;
+					// Clean up: if the new highest number is in the free list, remove it and decrement further.
+					while (freeSerials.includes(currentSerial)) {
+						freeSerials = freeSerials.filter((num) => num !== currentSerial);
+						currentSerial = currentSerial - 1;
+					}
+					transaction.update(counterRef, {
+						serial: currentSerial,
+						freeSerials,
+					});
+				} else {
+					// For a non-highest job, add the deleted serial to the free list (if not already present).
+					if (!freeSerials.includes(deletedSerial)) {
+						freeSerials.push(deletedSerial);
+						// Optional: sort freeSerials to always have the lowest available first.
+						freeSerials.sort((a, b) => a - b);
+					}
+					transaction.update(counterRef, { freeSerials });
+				}
 			}
 			// Delete the job document
 			transaction.delete(jobRef);

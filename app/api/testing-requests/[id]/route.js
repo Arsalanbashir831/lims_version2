@@ -51,19 +51,47 @@ export async function DELETE(request, { params }) {
 				throw new Error("Invalid requestId format");
 			}
 			const year = parts[1];
+			// Convert the serial string (e.g., "0001") to a number
+			const deletedSerial = parseInt(parts[2], 10);
+
+			// Define the counter document reference
 			const counterDocId = `requestCounter-${year}`;
 			const counterRef = doc(db, "counters", counterDocId);
 			const counterSnap = await transaction.get(counterRef);
+
 			if (!counterSnap.exists()) {
-				// If the counter document doesn't exist, create one with serial = 0
-				transaction.set(counterRef, { serial: 0 });
+				// If the counter document doesn't exist, create one with serial = 0 and an empty free list.
+				transaction.set(counterRef, { serial: 0, freeSerials: [] });
 			} else {
-				const currentSerial = counterSnap.data().serial;
-				// Decrement the counter if greater than zero
-				const newSerial = currentSerial > 0 ? currentSerial - 1 : 0;
-				transaction.update(counterRef, { serial: newSerial });
+				const data = counterSnap.data();
+				let currentSerial = data.serial;
+				let freeSerials = Array.isArray(data.freeSerials)
+					? data.freeSerials
+					: [];
+
+				if (deletedSerial === currentSerial) {
+					// If the deleted request is the highest allocated, decrement the counter.
+					currentSerial = currentSerial - 1;
+					// Check for consecutive free serials and remove them.
+					while (freeSerials.includes(currentSerial)) {
+						freeSerials = freeSerials.filter((num) => num !== currentSerial);
+						currentSerial = currentSerial - 1;
+					}
+					transaction.update(counterRef, {
+						serial: currentSerial,
+						freeSerials,
+					});
+				} else {
+					// For a non-highest request, add its serial to the free list if not already present.
+					if (!freeSerials.includes(deletedSerial)) {
+						freeSerials.push(deletedSerial);
+						// Sort the free list so that the lowest available serial can be easily picked later.
+						freeSerials.sort((a, b) => a - b);
+					}
+					transaction.update(counterRef, { freeSerials });
+				}
 			}
-			// Finally, delete the testing request document
+			// Finally, delete the testing request document.
 			transaction.delete(reqDocRef);
 		});
 		return NextResponse.json({ success: true });
