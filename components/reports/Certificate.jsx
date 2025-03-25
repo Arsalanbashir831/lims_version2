@@ -38,6 +38,14 @@ export default function Certificate({ certificate, group, pageStyle }) {
 					new Set(tableData.map((row) => row.images).filter((img) => !!img))
 			  )
 			: [];
+	const notes =
+		tableData && Array.isArray(tableData)
+			? Array.from(
+					new Set(tableData.map((row) => row.notes).filter((note) => !!note))
+			  )
+			: [];
+
+	console.log("notes", notes);
 
 	return (
 		<Card className="mt-4 gap-0 certificate-page" style={pageStyle}>
@@ -203,28 +211,26 @@ export default function Certificate({ certificate, group, pageStyle }) {
 				{/* Render images below the table */}
 				{images.length > 0 && (
 					<div className="mt-4">
-						{/* <h4 className="font-semibold mb-2">Images:</h4> */}
-						<div className="flex flex-col items-center justify-center flex-wrap gap-4">
+						<div className="flex flex-col items-center justify-center flex-wrap gap-8">
 							{images.map((imgUrl, idx) => (
-								// <div
-								// 	key={idx}
-								// 	className="w-full h-64 rounded"
-								// 	style={{
-								// 		backgroundImage: `url(${imgUrl})`,
-								// 		backgroundSize: "contain",
-								// 		backgroundRepeat: "no-repeat",
-								// 		backgroundPosition: "center",
-								// 	}}
-								// />
-								<div
-									key={idx}
-									className="w-96 h-64 relative flex items-center justify-center">
-									<Image
-										src={imgUrl}
-										alt={`Specimen ${specimenId} Image ${idx + 1}`}
-										className="max-w-xs object-contain object-center rounded"
-										fill
+								<div key={idx} className="flex flex-col items-center w-full">
+									{/* Container has full width and a fixed height (adjust as needed) */}
+									{/* <div className="w-full relative" style={{ height: "400px" }}>
+										<Image
+											src={imgUrl}
+											alt={`Specimen ${specimenId} Image ${idx + 1}`}
+											className="object-contain object-center rounded"
+											fill
+										/>
+									</div> */}
+									<div
+										className="w-full relative bg-contain bg-center rounded bg-no-repeat"
+										style={{
+											height: "400px",
+											backgroundImage: `url(${imgUrl})`,
+										}}
 									/>
+									<p className="mt-2 text-xl font-bold">{notes[idx] || ""}</p>
 								</div>
 							))}
 						</div>

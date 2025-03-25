@@ -37,7 +37,10 @@ export default function MethodPreviewTable({ testMethod, tableData }) {
 					))} */}
 					{testDefinition.test_columns.map((col) => {
 						// If it's an images column, show an image if there's a valid URL
-						if (col.toLowerCase() === "images") {
+						if (
+							col.toLowerCase() === "images" ||
+							col.toLowerCase() === "notes"
+						) {
 							return null;
 						}
 
@@ -56,7 +59,10 @@ export default function MethodPreviewTable({ testMethod, tableData }) {
 							let cellValue = row[col] ?? "";
 
 							// If it's an images column, show an image if there's a valid URL
-							if (col.toLowerCase() === "images") {
+							if (
+								col.toLowerCase() === "images" ||
+								col.toLowerCase() === "notes"
+							) {
 								return null;
 							}
 
