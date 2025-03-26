@@ -36,6 +36,7 @@ const columns = [
 	{ key: "client", label: "Client" },
 	{ key: "project", label: "Project" },
 	{ key: "totalSamples", label: "Total no of Samples" },
+	{ key: "specimenIds", label: "Specimen IDs" },
 ];
 
 // Helper function to create a default row.
@@ -109,6 +110,10 @@ function SubmittedRequestsPage() {
 							project: item.projectName,
 							totalSamples,
 							plannedTestDate,
+							specimenIds: item.rows
+								.map((r) => r.specimenIds)
+								.flat()
+								.join(", "),
 							requestBy: item.rows[0]?.requestBy || "",
 							remarks: item.rows[0]?.remarks || "",
 							raw: item, // store full object for preview/edit
