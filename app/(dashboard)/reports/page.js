@@ -38,6 +38,7 @@ function CertificatesPage() {
 						return {
 							id: cert.id,
 							certificateNumber: cert.issuanceNumber || "",
+							jobId: cert.jobId || "",
 							requestId: cert.requestId,
 							issueDate: details.issueDate || "",
 							clientName: details.clientNameCert || "",
@@ -92,6 +93,7 @@ function CertificatesPage() {
 	const columns = [
 		{ key: "certificateNumber", label: "Certificate #" },
 		{ key: "requestId", label: "Request #" },
+		{ key: "jobId", label: "Sample Lot #" },
 		{ key: "issueDate", label: "Issue Date" },
 		{ key: "clientName", label: "Client" },
 		{ key: "projectName", label: "Project" },

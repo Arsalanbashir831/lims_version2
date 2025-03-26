@@ -417,11 +417,14 @@ function SubmittedRequestsPage() {
 													</TableRow>
 												</TableHeader>
 												<TableBody>
+													{console.log(selectedRow)}
 													{selectedRow.rows.map((row, index) => (
 														<TableRow key={index} className="border-b">
 															{/* Item No. */}
 															<TableCell className="p-2 border">
-																{row.itemNo}
+																{selectedRow.testingJob?.sampleDetails[
+																	Number(row.itemNo)
+																]?.itemNo || ""}
 															</TableCell>
 															{/* Item Description */}
 															<TableCell className="p-2 border">
@@ -528,6 +531,7 @@ function SubmittedRequestsPage() {
 												</TableRow>
 											</TableHeader>
 											<TableBody>
+												{console.log(editRow)}
 												{editRow.rows.map((row, index) => (
 													<TableRow key={index}>
 														{/* Item No. Selection */}
