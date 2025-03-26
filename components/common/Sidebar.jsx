@@ -53,14 +53,12 @@ const personalItems = [
 export default function Sidebar() {
 	const pathname = usePathname();
 	const router = useRouter();
-	const [expandedSections, setExpandedSections] = useState({});
+	// Use a single state variable to track the open section
+	const [openSection, setOpenSection] = useState(null);
 	const [open, setOpen] = useState(false);
 
 	const toggleSection = (section) => {
-		setExpandedSections((prev) => ({
-			...prev,
-			[section]: !prev[section],
-		}));
+		setOpenSection(openSection === section ? null : section);
 	};
 
 	// Close the mobile sidebar on link click
@@ -95,15 +93,15 @@ export default function Sidebar() {
 									{item.name}
 									<ChevronDown
 										className={`w-4 h-4 transition-transform duration-300 ${
-											expandedSections[item.name] ? "rotate-180" : ""
+											openSection === item.name ? "rotate-180" : ""
 										}`}
 									/>
 								</button>
 								<motion.div
 									initial={{ height: 0, opacity: 0 }}
 									animate={{
-										height: expandedSections[item.name] ? "auto" : 0,
-										opacity: expandedSections[item.name] ? 1 : 0,
+										height: openSection === item.name ? "auto" : 0,
+										opacity: openSection === item.name ? 1 : 0,
 									}}
 									transition={{ duration: 0.3, ease: "easeInOut" }}
 									className="overflow-hidden">
