@@ -19,9 +19,11 @@ import {
 	updateDoc,
 	deleteDoc,
 	doc,
+	getDoc,
 } from "firebase/firestore";
 import { IASLogo } from "@/components/common/IASLogo";
-import { getBase64FromUrl } from "@/lib/utils";
+import { getBase64FromUrl, restrictUser } from "@/lib/utils";
+import { getAuth } from "firebase/auth";
 
 const LabEquipments = () => {
 	const columns = [
@@ -37,6 +39,7 @@ const LabEquipments = () => {
 	];
 
 	const [data, setData] = useState([]);
+	const [userRole, setUserRole] = useState(null);
 	const [newEquipment, setNewEquipment] = useState({
 		equipmentName: "",
 		equipmentSerial: "",
@@ -51,25 +54,47 @@ const LabEquipments = () => {
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [fileName, setFileName] = useState("Equipment_Inventory_List.xlsx");
 
-	// Fetch equipments from Firestore
-	const fetchEquipments = async () => {
+	const fetchData = async () => {
 		try {
-			const equipmentsCollection = collection(db, "equipments");
-			const snapshot = await getDocs(equipmentsCollection);
-			const equipments = snapshot.docs.map((docSnap, index) => ({
+			// Get current user
+			const auth = getAuth();
+			const currentUser = auth.currentUser;
+			if (!currentUser) {
+				console.error("No user is currently logged in.");
+				return;
+			}
+			const userId = currentUser.uid;
+
+			// Run both API calls concurrently
+			const [testsSnapshot, userDocSnap] = await Promise.all([
+				getDocs(collection(db, "equipments")),
+				getDoc(doc(db, "users", userId)),
+			]);
+
+			// Process proficiency tests
+			const tests = testsSnapshot.docs.map((docSnap, index) => ({
 				id: docSnap.id,
 				srNo: index + 1,
 				...docSnap.data(),
 			}));
-			setData(equipments);
+			setData(tests);
+
+			// Process user role
+			if (userDocSnap.exists()) {
+				const userRole = userDocSnap.data().user_role;
+				setUserRole(userRole);
+			} else {
+				console.error("User document does not exist");
+				toast.error("User not found.");
+			}
 		} catch (error) {
-			console.error("Error fetching equipments:", error);
-			toast.error("Error fetching equipments.");
+			console.error("Error fetching data:", error);
+			toast.error("Error fetching data.");
 		}
 	};
 
 	useEffect(() => {
-		fetchEquipments();
+		fetchData();
 	}, []);
 
 	const handleChange = (e) => {
@@ -78,7 +103,7 @@ const LabEquipments = () => {
 
 	const handleAddOrUpdate = async () => {
 		try {
-			if (editIndex !== null) {
+			if (editIndex !== null && !restrictUser(userRole)) {
 				// Update equipment in Firestore
 				const equipmentToEdit = data[editIndex];
 				await updateDoc(
@@ -103,7 +128,7 @@ const LabEquipments = () => {
 			});
 			setEditIndex(null);
 			setIsDialogOpen(false);
-			fetchEquipments();
+			fetchData();
 		} catch (error) {
 			console.error("Error adding/updating equipment:", error);
 			toast.error("Error adding/updating equipment.");
@@ -121,7 +146,7 @@ const LabEquipments = () => {
 			const equipmentToDelete = data[index];
 			await deleteDoc(doc(db, "equipments", equipmentToDelete.id));
 			toast.success("Equipment deleted successfully");
-			fetchEquipments();
+			fetchData();
 		} catch (error) {
 			console.error("Error deleting equipment:", error);
 			toast.error("Error deleting equipment.");
@@ -246,6 +271,7 @@ const LabEquipments = () => {
 					data={data}
 					onEdit={handleEdit}
 					onDelete={handleDelete}
+					isEditingDisabled={restrictUser(userRole)}
 				/>
 			</div>
 		</div>

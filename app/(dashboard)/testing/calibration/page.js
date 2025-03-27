@@ -10,7 +10,7 @@ import {
 	DialogTrigger,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { getBase64FromUrl } from "@/lib/utils";
+import { getBase64FromUrl, restrictUser } from "@/lib/utils";
 import { toast } from "sonner";
 import { db } from "@/config/firebase-config";
 import {
@@ -20,8 +20,10 @@ import {
 	updateDoc,
 	deleteDoc,
 	doc,
+	getDoc,
 } from "firebase/firestore";
 import { IASLogo } from "@/components/common/IASLogo";
+import { getAuth } from "firebase/auth";
 
 const CalibrationTestingPage = () => {
 	const columns = [
@@ -50,30 +52,53 @@ const CalibrationTestingPage = () => {
 	};
 
 	const [data, setData] = useState([]);
+	const [userRole, setUserRole] = useState(null);
 	const [newTest, setNewTest] = useState(initialTestState);
 	const [editIndex, setEditIndex] = useState(null);
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [fileName, setFileName] = useState("Calibration_Testing_List.xlsx");
 
-	// Fetch calibration tests from Firestore
-	const fetchTests = async () => {
+	const fetchData = async () => {
 		try {
-			const testsCollection = collection(db, "calibrationTests");
-			const snapshot = await getDocs(testsCollection);
-			const tests = snapshot.docs.map((docSnap, index) => ({
+			// Get current user
+			const auth = getAuth();
+			const currentUser = auth.currentUser;
+			if (!currentUser) {
+				console.error("No user is currently logged in.");
+				return;
+			}
+			const userId = currentUser.uid;
+
+			// Run both API calls concurrently
+			const [testsSnapshot, userDocSnap] = await Promise.all([
+				getDocs(collection(db, "calibrationTests")),
+				getDoc(doc(db, "users", userId)),
+			]);
+
+			// Process proficiency tests
+			const tests = testsSnapshot.docs.map((docSnap, index) => ({
 				id: docSnap.id,
 				srNo: index + 1,
 				...docSnap.data(),
 			}));
 			setData(tests);
+
+			// Process user role
+			if (userDocSnap.exists()) {
+				const userRole = userDocSnap.data().user_role;
+				setUserRole(userRole);
+			} else {
+				console.error("User document does not exist");
+				toast.error("User not found.");
+			}
 		} catch (error) {
-			console.error("Error fetching calibration tests:", error);
-			toast.error("Error fetching calibration tests.");
+			console.error("Error fetching data:", error);
+			toast.error("Error fetching data.");
 		}
 	};
 
 	useEffect(() => {
-		fetchTests();
+		fetchData();
 	}, []);
 
 	const handleChange = (e) => {
@@ -82,7 +107,7 @@ const CalibrationTestingPage = () => {
 
 	const handleAddOrUpdate = async () => {
 		try {
-			if (editIndex !== null) {
+			if (editIndex !== null && !restrictUser(userRole)) {
 				// Update existing test in Firestore
 				const testToEdit = data[editIndex];
 				await updateDoc(doc(db, "calibrationTests", testToEdit.id), newTest);
@@ -96,7 +121,7 @@ const CalibrationTestingPage = () => {
 			setNewTest(initialTestState);
 			setEditIndex(null);
 			setIsDialogOpen(false);
-			fetchTests();
+			fetchData();
 		} catch (error) {
 			console.error("Error adding/updating calibration test:", error);
 			toast.error("Error adding/updating calibration test.");
@@ -114,7 +139,7 @@ const CalibrationTestingPage = () => {
 			const testToDelete = data[index];
 			await deleteDoc(doc(db, "calibrationTests", testToDelete.id));
 			toast.success("Calibration test deleted successfully");
-			fetchTests();
+			fetchData();
 		} catch (error) {
 			console.error("Error deleting calibration test:", error);
 			toast.error("Error deleting calibration test.");
@@ -250,6 +275,7 @@ const CalibrationTestingPage = () => {
 					data={data}
 					onEdit={handleEdit}
 					onDelete={handleDelete}
+					isEditingDisabled={restrictUser(userRole)}
 				/>
 			</div>
 		</div>

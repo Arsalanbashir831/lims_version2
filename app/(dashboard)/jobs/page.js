@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Trash } from "lucide-react";
 import ReusableSampleLotsTable from "@/components/common/ReusableSlotsTable";
-import { getBase64FromUrl } from "@/lib/utils";
+import { getBase64FromUrl, restrictUser } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { IASLogo } from "@/components/common/IASLogo";
+import { getAuth } from "firebase/auth";
 
 const SampleLotsPage = () => {
 	// Table columns – these keys should exist at the top level of each job record.
@@ -22,6 +23,7 @@ const SampleLotsPage = () => {
 	];
 
 	const [data, setData] = useState([]);
+	const [userRole, setUserRole] = useState(null);
 	const [selectedRow, setSelectedRow] = useState(null);
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const router = useRouter();
@@ -29,7 +31,16 @@ const SampleLotsPage = () => {
 	// Fetch job records from the API and flatten the nested sample object.
 	const fetchJobs = async () => {
 		try {
-			const res = await fetch("/api/jobs", { method: "GET" });
+			// Get current user
+			const auth = getAuth();
+			const currentUser = auth.currentUser;
+			if (!currentUser) {
+				console.error("No user is currently logged in.");
+				return;
+			}
+			const userId = currentUser.uid;
+
+			const res = await fetch(`/api/jobs?userId=${userId}`, { method: "GET" });
 			const json = await res.json();
 			if (res.ok) {
 				// Flatten each job by merging the top-level "sample" fields.
@@ -47,6 +58,7 @@ const SampleLotsPage = () => {
 					};
 				});
 				setData(flattenedJobs);
+				setUserRole(json.userRole || null);
 			} else {
 				toast.error(json.error || "Failed to fetch jobs");
 			}
@@ -68,7 +80,11 @@ const SampleLotsPage = () => {
 
 	// Navigate to edit page when edit is clicked
 	const handleEdit = (row) => {
-		router.push(`/jobs/${row.id}`);
+		if (!restrictUser(userRole)) {
+			router.push(`/jobs/${row.id}`);
+		} else {
+			toast.error("You do not have permission to edit this job.");
+		}
 	};
 
 	// Call API to delete a job and refresh the list
@@ -152,6 +168,7 @@ const SampleLotsPage = () => {
 					onEdit={handleEdit}
 					onDelete={handleDelete}
 					onDownload={handleDownload}
+					isEditingDisabled={restrictUser(userRole)}
 				/>
 			</div>
 

@@ -16,17 +16,28 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Eye, Pencil, Trash } from "lucide-react";
 import { IASLogo } from "@/components/common/IASLogo";
+import { getAuth } from "firebase/auth";
+import { restrictUser } from "@/lib/utils";
 
 function CertificatesPage() {
 	const router = useRouter();
 	// State to hold the list of certificate records.
 	const [data, setData] = useState([]);
+	const [userRole, setUserRole] = useState(null);
 
 	// Fetch certificates on mount.
 	useEffect(() => {
 		const fetchCertificates = async () => {
 			try {
-				const res = await fetch("/api/certificates/");
+				const auth = getAuth();
+				const currentUser = auth.currentUser;
+				if (!currentUser) {
+					console.error("No user is currently logged in.");
+					return;
+				}
+				const userId = currentUser.uid;
+
+				const res = await fetch(`/api/certificates?userId=${userId}`);
 				const result = await res.json();
 				if (result.success) {
 					// Map certificate data to table rows.
@@ -49,6 +60,7 @@ function CertificatesPage() {
 					});
 
 					setData(mappedData);
+					setUserRole(result.userRole || null);
 				} else {
 					toast.error(result.error || "Failed to fetch certificates");
 				}
@@ -67,8 +79,11 @@ function CertificatesPage() {
 	};
 
 	const handleEdit = (row) => {
-		// Navigate to /reports/[id]
-		router.push(`/reports/${row.id}`);
+		if (!restrictUser(userRole)) {
+			router.push(`/reports/${row.id}`);
+		} else {
+			toast.error("You do not have permission to edit this certificate.");
+		}
 	};
 
 	const handleDelete = async (row) => {
@@ -140,6 +155,7 @@ function CertificatesPage() {
 										<Button
 											size="sm"
 											onClick={() => handleEdit(row)}
+											disabled={restrictUser(userRole)}
 											className="bg-green-500 text-white hover:bg-green-600">
 											<Pencil className="w-4 h-4" />
 										</Button>

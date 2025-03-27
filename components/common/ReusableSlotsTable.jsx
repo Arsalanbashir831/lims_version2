@@ -19,6 +19,7 @@ const ReusableSampleLotsTable = ({
 	onEdit,
 	onDelete,
 	onDownload,
+	isEditingDisabled,
 }) => {
 	return (
 		<div className="overflow-x-auto bg-white shadow-md rounded-lg md:max-w-6xl mx-auto">
@@ -60,6 +61,7 @@ const ReusableSampleLotsTable = ({
 									<Button
 										variant="outline"
 										onClick={() => onEdit(row)}
+										disabled={isEditingDisabled}
 										className="bg-green-500 text-white hover:bg-green-600">
 										<Pencil className="w-4 h-4" />
 									</Button>

@@ -25,8 +25,9 @@ import ReusableSampleLotsTable from "@/components/common/ReusableSlotsTable";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import SpecimenIdInput from "@/components/common/SpecimenIdInput";
-import { getBase64FromUrl } from "@/lib/utils";
+import { getBase64FromUrl, restrictUser } from "@/lib/utils";
 import { IASLogo } from "@/components/common/IASLogo";
+import { getAuth } from "firebase/auth";
 
 // Define the table columns for the main list.
 const columns = [
@@ -58,6 +59,7 @@ const getDefaultRow = () => ({
 function SubmittedRequestsPage() {
 	// data state holds the flattened testing request objects for the main table.
 	const [data, setData] = useState([]);
+	const [userRole, setUserRole] = useState(null);
 	// The raw testing request object for preview/edit is stored here.
 	const [selectedRow, setSelectedRow] = useState(null);
 	const [dialogMode, setDialogMode] = useState("preview");
@@ -71,10 +73,19 @@ function SubmittedRequestsPage() {
 	useEffect(() => {
 		const fetchJobs = async () => {
 			try {
-				const res = await fetch("/api/jobs/");
+				const auth = getAuth();
+				const currentUser = auth.currentUser;
+				if (!currentUser) {
+					console.error("No user is currently logged in.");
+					return;
+				}
+				const userId = currentUser.uid;
+
+				const res = await fetch(`/api/jobs?userId=${userId}`);
 				const data = await res.json();
 				if (data.success) {
 					setJobs(data.jobs);
+					setUserRole(data.userRole);
 				} else {
 					toast.error(data.error || "Failed to fetch jobs");
 				}
@@ -146,11 +157,15 @@ function SubmittedRequestsPage() {
 
 	// Edit mode handler.
 	const handleEdit = (row) => {
-		const job = getJobById(row.raw.jobId);
-		setSelectedRow({ ...row.raw, testingJob: job });
-		setEditRow({ ...row.raw, testingJob: job });
-		setDialogMode("edit");
-		setIsDialogOpen(true);
+		if (!restrictUser(userRole)) {
+			const job = getJobById(row.raw.jobId);
+			setSelectedRow({ ...row.raw, testingJob: job });
+			setEditRow({ ...row.raw, testingJob: job });
+			setDialogMode("edit");
+			setIsDialogOpen(true);
+		} else {
+			toast.error("You do not have permission to edit this request.");
+		}
 	};
 
 	// Delete handler.
@@ -320,6 +335,7 @@ function SubmittedRequestsPage() {
 				onEdit={handleEdit}
 				onDelete={handleDelete}
 				onDownload={handleDownload}
+				isEditingDisabled={restrictUser(userRole)}
 			/>
 
 			<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

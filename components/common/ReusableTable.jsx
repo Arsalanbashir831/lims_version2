@@ -9,7 +9,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash } from "lucide-react";
 
-const ReusableTable = ({ columns, data, onEdit, onDelete }) => {
+const ReusableTable = ({
+	columns,
+	data,
+	onEdit,
+	onDelete,
+	isEditingDisabled,
+}) => {
 	return (
 		<div className="overflow-x-auto border rounded-lg shadow-md bg-white md:max-w-6xl mx-auto">
 			<Table>
@@ -37,6 +43,7 @@ const ReusableTable = ({ columns, data, onEdit, onDelete }) => {
 										size="sm"
 										variant="outline"
 										onClick={() => onEdit(rowIndex)}
+										disabled={isEditingDisabled}
 										className="mr-2 bg-green-500 text-white hover:bg-green-600">
 										<Pencil className="w-4 h-4" />
 									</Button>

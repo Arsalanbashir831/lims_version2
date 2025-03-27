@@ -19,9 +19,11 @@ import {
 	updateDoc,
 	deleteDoc,
 	doc,
+	getDoc,
 } from "firebase/firestore";
 import { IASLogo } from "@/components/common/IASLogo";
-import { getBase64FromUrl } from "@/lib/utils";
+import { getBase64FromUrl, restrictUser } from "@/lib/utils";
+import { getAuth } from "firebase/auth";
 
 const ProficiencyTestingPage = () => {
 	const columns = [
@@ -48,30 +50,53 @@ const ProficiencyTestingPage = () => {
 	};
 
 	const [data, setData] = useState([]);
+	const [userRole, setUserRole] = useState(null);
 	const [newTest, setNewTest] = useState(initialTestState);
 	const [editIndex, setEditIndex] = useState(null);
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [fileName, setFileName] = useState("Proficiency_Testing_List.xlsx");
 
-	// Fetch proficiency tests from Firestore
-	const fetchTests = async () => {
+	const fetchData = async () => {
 		try {
-			const testsCollection = collection(db, "proficiencyTests");
-			const snapshot = await getDocs(testsCollection);
-			const tests = snapshot.docs.map((docSnap, index) => ({
+			// Get current user
+			const auth = getAuth();
+			const currentUser = auth.currentUser;
+			if (!currentUser) {
+				console.error("No user is currently logged in.");
+				return;
+			}
+			const userId = currentUser.uid;
+
+			// Run both API calls concurrently
+			const [testsSnapshot, userDocSnap] = await Promise.all([
+				getDocs(collection(db, "proficiencyTests")),
+				getDoc(doc(db, "users", userId)),
+			]);
+
+			// Process proficiency tests
+			const tests = testsSnapshot.docs.map((docSnap, index) => ({
 				id: docSnap.id,
 				srNo: index + 1,
 				...docSnap.data(),
 			}));
 			setData(tests);
+
+			// Process user role
+			if (userDocSnap.exists()) {
+				const userRole = userDocSnap.data().user_role;
+				setUserRole(userRole);
+			} else {
+				console.error("User document does not exist");
+				toast.error("User not found.");
+			}
 		} catch (error) {
-			console.error("Error fetching proficiency tests:", error);
-			toast.error("Error fetching proficiency tests.");
+			console.error("Error fetching data:", error);
+			toast.error("Error fetching data.");
 		}
 	};
 
 	useEffect(() => {
-		fetchTests();
+		fetchData();
 	}, []);
 
 	const handleChange = (e) => {
@@ -80,7 +105,7 @@ const ProficiencyTestingPage = () => {
 
 	const handleAddOrUpdate = async () => {
 		try {
-			if (editIndex !== null) {
+			if (editIndex !== null && !restrictUser(userRole)) {
 				// Update existing test in Firestore
 				const testToEdit = data[editIndex];
 				await updateDoc(doc(db, "proficiencyTests", testToEdit.id), newTest);
@@ -94,7 +119,7 @@ const ProficiencyTestingPage = () => {
 			setNewTest(initialTestState);
 			setEditIndex(null);
 			setIsDialogOpen(false);
-			fetchTests();
+			fetchData();
 		} catch (error) {
 			console.error("Error adding/updating proficiency test:", error);
 			toast.error("Error adding/updating proficiency test.");
@@ -112,7 +137,7 @@ const ProficiencyTestingPage = () => {
 			const testToDelete = data[index];
 			await deleteDoc(doc(db, "proficiencyTests", testToDelete.id));
 			toast.success("Proficiency test deleted successfully");
-			fetchTests();
+			fetchData();
 		} catch (error) {
 			console.error("Error deleting proficiency test:", error);
 			toast.error("Error deleting proficiency test.");
@@ -259,6 +284,7 @@ const ProficiencyTestingPage = () => {
 				data={data}
 				onEdit={handleEdit}
 				onDelete={handleDelete}
+				isEditingDisabled={restrictUser(userRole)}
 			/>
 		</div>
 	);
