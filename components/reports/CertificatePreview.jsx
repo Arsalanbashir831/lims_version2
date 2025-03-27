@@ -323,17 +323,14 @@ export default function CertificatePreview({
 	//   2) PDF Download
 	// -----------------------
 	const downloadPdf = async () => {
-		const certificateElement = document.getElementById("certificate-content");
-		if (!certificateElement) return;
+		// Select each certificate element based on your structure.
+		// Here we assume that each certificate preview is the inner div with classes "mb-6 rounded"
+		const certificateElements = document.querySelectorAll(
+			"#certificate-content .certificate-preview"
+		);
+		if (!certificateElements.length) return;
 
 		setIsDownloading(true);
-		const canvas = await html2canvas(certificateElement, {
-			scale: 2,
-			useCORS: true,
-		});
-		const canvasWidth = canvas.width;
-		const canvasHeight = canvas.height;
-
 		// Create a new jsPDF instance (A4 size)
 		const pdf = new jsPDF({
 			orientation: "portrait",
@@ -343,52 +340,75 @@ export default function CertificatePreview({
 		const pdfWidth = pdf.internal.pageSize.getWidth();
 		const pdfHeight = pdf.internal.pageSize.getHeight();
 
-		// Determine the height (in canvas pixels) corresponding to one PDF page.
-		const segmentHeight = (pdfHeight * canvasWidth) / pdfWidth;
-		const totalSegments = Math.ceil(canvasHeight / segmentHeight);
+		// Iterate over each certificate element
+		for (let i = 0; i < certificateElements.length; i++) {
+			const element = certificateElements[i];
 
-		// Loop over each segment (page)
-		for (let i = 0; i < totalSegments; i++) {
-			let currentSegmentHeight = segmentHeight;
-			if (i === totalSegments - 1) {
-				currentSegmentHeight = canvasHeight - i * segmentHeight;
+			// Force each certificate to start on a new page (except the very first certificate)
+			if (i > 0) {
+				pdf.addPage();
 			}
 
-			// Create a temporary canvas to hold this segment
-			const segmentCanvas = document.createElement("canvas");
-			segmentCanvas.width = canvasWidth;
-			segmentCanvas.height = currentSegmentHeight;
-			const segmentCtx = segmentCanvas.getContext("2d");
+			// Render the certificate element to a canvas using html2canvas
+			const canvas = await html2canvas(element, {
+				scale: 2,
+				useCORS: true,
+			});
+			const canvasWidth = canvas.width;
+			const canvasHeight = canvas.height;
 
-			// Draw the current segment from the main canvas into the temporary canvas.
-			segmentCtx.drawImage(
-				canvas,
-				0,
-				i * segmentHeight, // source y coordinate
-				canvasWidth,
-				currentSegmentHeight, // source height
-				0,
-				0,
-				canvasWidth,
-				currentSegmentHeight // destination height
-			);
+			// Calculate the canvas height corresponding to one PDF page
+			const segmentHeight = (pdfHeight * canvasWidth) / pdfWidth;
+			const totalSegments = Math.ceil(canvasHeight / segmentHeight);
 
-			const segmentDataUrl = segmentCanvas.toDataURL("image/png");
+			// Split the certificate canvas into segments (pages)
+			for (let j = 0; j < totalSegments; j++) {
+				// For segments after the first in this certificate, add a new page
+				if (j > 0) {
+					pdf.addPage();
+				}
 
-			if (i > 0) pdf.addPage();
+				// Determine the height of the current segment (the last segment might be shorter)
+				const currentSegmentHeight =
+					j === totalSegments - 1
+						? canvasHeight - j * segmentHeight
+						: segmentHeight;
 
-			const renderedSegmentHeight =
-				(currentSegmentHeight * pdfWidth) / canvasWidth;
-			pdf.addImage(
-				segmentDataUrl,
-				"PNG",
-				0,
-				0,
-				pdfWidth,
-				renderedSegmentHeight
-			);
+				// Create a temporary canvas to hold this segment
+				const segmentCanvas = document.createElement("canvas");
+				segmentCanvas.width = canvasWidth;
+				segmentCanvas.height = currentSegmentHeight;
+				const segmentCtx = segmentCanvas.getContext("2d");
+
+				// Draw the corresponding segment from the main canvas
+				segmentCtx.drawImage(
+					canvas,
+					0,
+					j * segmentHeight, // source y coordinate
+					canvasWidth,
+					currentSegmentHeight, // source height
+					0,
+					0,
+					canvasWidth,
+					currentSegmentHeight // destination height
+				);
+
+				const segmentDataUrl = segmentCanvas.toDataURL("image/png");
+				// Calculate the rendered height for the PDF page
+				const renderedSegmentHeight =
+					(currentSegmentHeight * pdfWidth) / canvasWidth;
+				pdf.addImage(
+					segmentDataUrl,
+					"PNG",
+					0,
+					0,
+					pdfWidth,
+					renderedSegmentHeight
+				);
+			}
 		}
 
+		// Save the generated PDF file
 		pdf.save("certificate.pdf");
 		setIsDownloading(false);
 	};
@@ -412,7 +432,7 @@ export default function CertificatePreview({
 						{group.specimenSections?.map((specimen, specimenIdx) => (
 							<div
 								key={`group-${groupIdx}-specimen-${specimenIdx}`}
-								className="mb-6 rounded">
+								className="mb-6 rounded certificate-preview">
 								{/* Render your HTML/React certificate preview here */}
 								<Certificate
 									certificate={certificateData}
