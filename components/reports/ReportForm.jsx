@@ -34,7 +34,7 @@ const certificateFields = [
 	{ key: "poNumber", label: "PO #", type: "text" },
 	{ key: "customerNameNo", label: "Customer’s Name & no.", type: "text" },
 	{ key: "attn", label: "Atten", type: "text" },
-	{ key: "customerPO", label: "CUSTOMER PO (ALNASSAR)", type: "text" },
+	{ key: "customerPO", label: "CUSTOMER PO", type: "text" },
 	{ key: "projectNameCert", label: "Project Name", type: "text" },
 	{ key: "labName", label: "Name of Laboratory", type: "text" },
 	{ key: "labAddress", label: "Address", type: "text" },
