@@ -953,6 +953,9 @@ function ReportForm({ initialData }) {
 			})),
 		};
 
+		console.log("Final Payload:", cleanPayload);
+		return;
+
 		try {
 			setIsSubmitting(true);
 			let response;
