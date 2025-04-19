@@ -1,3 +1,4 @@
+import React from "react";
 import { testMethods } from "@/lib/constants";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,36 +22,42 @@ export default function TestMethodCard({
 	customCols,
 	setCustomCols,
 }) {
-	const columns =
+	// Find base test columns
+	const baseColumns =
 		testMethods.find((t) => t.test_name === row.testMethod)?.test_columns || [];
+
 	return (
 		<Card className="mb-6 shadow-sm">
 			<CardHeader>
 				<CardTitle>{row.testMethod}</CardTitle>
 			</CardHeader>
 			<CardContent>
+				{/* Certificate details section */}
 				<CertificateDetails
 					groupKey={groupKey}
-					row={row}
+					row={row.certificateDetails || row}
 					values={values}
 					onChange={onChange}
 					selected={selected}
 				/>
+
+				{/* Add specimen button */}
 				<div className="flex justify-end items-center mb-4">
 					<Button
-						variant=""
 						onClick={() => addSection(groupKey)}
 						disabled={!sections[groupKey]}>
 						Add Specimen
 					</Button>
 				</div>
+
+				{/* Render each specimen section */}
 				{sections[groupKey]?.map((idx) => (
 					<SpecimenSection
 						key={idx}
 						groupKey={groupKey}
 						idx={idx}
 						row={row}
-						columns={columns}
+						columns={baseColumns}
 						values={values}
 						onChange={onChange}
 						extraIds={extraRows[`${groupKey}-specimen-${idx}`] || []}
@@ -61,7 +68,8 @@ export default function TestMethodCard({
 						setCustomCols={setCustomCols}
 					/>
 				))}
-				{/* Remarks Field */}
+
+				{/* Remarks field */}
 				<div className="mb-6">
 					<label className="block text-sm font-medium text-gray-700 mb-1">
 						Remarks
@@ -73,6 +81,44 @@ export default function TestMethodCard({
 						placeholder="Add any remarks"
 						className="w-full"
 					/>
+				</div>
+
+				{/* Footer inputs: Tested By and Witnessed By */}
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+					<div className="flex flex-col">
+						<label className="text-sm font-medium text-gray-700 mb-1">
+							Tested By
+						</label>
+						<Input
+							type="text"
+							value={
+								values[`cert-${groupKey}-testedBy`] ||
+								row.footer?.testedBy ||
+								""
+							}
+							onChange={(e) =>
+								onChange(`cert-${groupKey}-testedBy`, e.target.value)
+							}
+							placeholder="Tested By"
+						/>
+					</div>
+					<div className="flex flex-col">
+						<label className="text-sm font-medium text-gray-700 mb-1">
+							Witnessed By
+						</label>
+						<Input
+							type="text"
+							value={
+								values[`cert-${groupKey}-witnessedBy`] ||
+								row.footer?.witnessedBy ||
+								""
+							}
+							onChange={(e) =>
+								onChange(`cert-${groupKey}-witnessedBy`, e.target.value)
+							}
+							placeholder="Witnessed By"
+						/>
+					</div>
 				</div>
 			</CardContent>
 		</Card>

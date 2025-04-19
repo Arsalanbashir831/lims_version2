@@ -58,6 +58,8 @@ export default function CertificatePreview({
 		if (id) fetchCertificate();
 	}, [id]);
 
+	console.log("Certificate Data:", certificateData);
+
 	// -----------------------
 	//   1) EXCEL Download
 	// -----------------------

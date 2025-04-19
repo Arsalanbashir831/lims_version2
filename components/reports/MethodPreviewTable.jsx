@@ -4,21 +4,23 @@ import React from "react";
 import { testMethods } from "@/lib/constants";
 
 export default function MethodPreviewTable({ testMethod, tableData }) {
-	// Look up the matching test definition
+	// Look up the matching test definition (for fallback or additional info)
 	const testDefinition = testMethods.find(
 		(item) => item.test_name === testMethod
 	);
-
-	console.log("testDefinition", tableData);
 
 	if (!testDefinition) {
 		return <p>No definition found for {testMethod}</p>;
 	}
 
-	// If there's no tableData, display a fallback
 	if (!Array.isArray(tableData) || tableData.length === 0) {
 		return <p>No table data available.</p>;
 	}
+
+	// Derive column headers from the first row's keys, excluding images/notes
+	const allCols = Object.keys(tableData[0]).filter(
+		(col) => col.toLowerCase() !== "images" && col.toLowerCase() !== "notes"
+	);
 
 	return (
 		<table
@@ -30,48 +32,21 @@ export default function MethodPreviewTable({ testMethod, tableData }) {
 			}}>
 			<thead>
 				<tr>
-					{/* {testDefinition.test_columns.map((col) => (
+					{allCols.map((col) => (
 						<th key={col} style={thStyle}>
 							{col}
 						</th>
-					))} */}
-					{testDefinition.test_columns.map((col) => {
-						// If it's an images column, show an image if there's a valid URL
-						if (
-							col.toLowerCase() === "images" ||
-							col.toLowerCase() === "notes"
-						) {
-							return null;
-						}
-
-						return (
-							<th key={col} style={thStyle}>
-								{col}
-							</th>
-						);
-					})}
+					))}
 				</tr>
 			</thead>
 			<tbody>
 				{tableData.map((row, rowIndex) => (
 					<tr key={rowIndex}>
-						{testDefinition.test_columns.map((col) => {
-							let cellValue = row[col] ?? "";
-
-							// If it's an images column, show an image if there's a valid URL
-							if (
-								col.toLowerCase() === "images" ||
-								col.toLowerCase() === "notes"
-							) {
-								return null;
-							}
-
-							return (
-								<td key={col} style={tdStyle}>
-									{cellValue}
-								</td>
-							);
-						})}
+						{allCols.map((col) => (
+							<td key={col} style={tdStyle}>
+								{row[col] ?? ""}
+							</td>
+						))}
 					</tr>
 				))}
 			</tbody>

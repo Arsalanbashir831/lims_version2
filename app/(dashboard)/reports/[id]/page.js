@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import ReportForm from "@/components/reports/ReportForm";
+import NewReportForm from "@/components/reports/NewReportForm";
 export default function EditReportPage() {
 	// Get the dynamic id from the route parameters.
 	const { id } = useParams();
@@ -40,7 +41,8 @@ export default function EditReportPage() {
 		<div className="container mx-auto p-4">
 			<h1 className="text-2xl font-bold mb-4">Edit Report {id}</h1>
 			{/* Pass the fetched data as a prop to pre-populate the form */}
-			<ReportForm initialData={reportData} />
+			{/* <ReportForm initialData={reportData} /> */}
+			<NewReportForm initialData={reportData} />
 		</div>
 	);
 }

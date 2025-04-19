@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
@@ -46,6 +46,16 @@ export default function SpecimenSection({
 	customCols,
 	setCustomCols,
 }) {
+	console.log("SpecimenSection", {
+		groupKey,
+		idx,
+		row,
+		columns,
+		values,
+		requestId,
+		extraIds,
+		customCols,
+	});
 	const [editingIndex, setEditingIndex] = useState(null);
 	const [tempName, setTempName] = useState("");
 
@@ -60,7 +70,24 @@ export default function SpecimenSection({
 
 	const specimenKey = `${groupKey}-specimen-${idx}`;
 	const idKey = `${specimenKey}-id`;
-	const selectedId = values[idKey] || row.specimenIds?.[0] || "";
+
+	// gather specimen IDs
+	const specimenIds =
+		row.specimenIds || row.specimenSections?.map((s) => s.specimenId) || [];
+	const defaultId = row.specimenSections?.[idx]?.specimenId || null;
+	const selectedId = values[idKey] !== "" ? values[idKey] : defaultId;
+
+	console.log("values[idKey]", values[idKey]);
+	console.log("specimenIds", specimenIds);
+	console.log("defaultId", defaultId);
+	console.log("selectedId", selectedId);
+
+	// initialize default specimenId
+	useEffect(() => {
+		if (defaultId && values[idKey] === undefined) {
+			onChange(idKey, defaultId);
+		}
+	}, [defaultId, idKey, onChange, values]);
 
 	const addColumn = useCallback(
 		(at, after) => {
@@ -85,11 +112,7 @@ export default function SpecimenSection({
 		async (keyName) => {
 			const cellVal = values[keyName];
 			if (cellVal?.storagePath) {
-				try {
-					await deleteObject(ref(storage, cellVal.storagePath));
-				} catch (error) {
-					console.error("Error deleting image:", error);
-				}
+				await deleteObject(ref(storage, cellVal.storagePath)).catch(() => {});
 			}
 			onChange(keyName, null);
 		},
@@ -97,16 +120,23 @@ export default function SpecimenSection({
 	);
 
 	const renderCell = (col, sectionIndex, extraId = null) => {
-		const rowType = extraId ? "extra" : "base";
-		const keyName = `${groupKey}-specimen-${idx}-${
-			rowType === "base" ? 0 : `extra-${extraId}`
-		}-${col}`;
+		const rowType = extraId !== null ? `extra-${extraId}` : "0";
+		const keyName = `${specimenKey}-${rowType}-${col}`;
+
+		// handle images
 		if (col.toLowerCase() === "images") {
-			const val = values[keyName] || {};
-			const preview = val?.preview || null;
+			// fallback to existing URL if no new upload
+			const existingUrl =
+				row.specimenSections?.[sectionIndex]?.tableData[0]?.images || null;
+			const val = values[keyName]
+				? values[keyName]
+				: existingUrl
+				? { preview: existingUrl, downloadURL: existingUrl, storagePath: null }
+				: {};
+			const preview = val.preview;
 			return (
 				<TableCell key={col} className="relative p-2">
-					{preview !== null ? (
+					{preview ? (
 						<div className="relative h-24">
 							<Image
 								src={preview}
@@ -118,9 +148,9 @@ export default function SpecimenSection({
 							<Button
 								variant="secondary"
 								size="icon"
-								className="absolute -top-2 -right-1 z-10 p-0.5 w-fit h-fit rounded-full hover:bg-secondary"
+								className="absolute top-0 -right-2 w-fit h-fit p-0.5"
 								onClick={() => handleDeleteImage(keyName)}>
-								<X className="h-2 w-2" />
+								<X className="h-4 w-4" />
 							</Button>
 						</div>
 					) : (
@@ -140,8 +170,15 @@ export default function SpecimenSection({
 				</TableCell>
 			);
 		}
-		const val =
-			values[keyName] ?? (row[col.toLowerCase().replace(/ /g, "")] || "");
+
+		// text/fallback for non-image
+		let raw = "";
+		if (row.specimenSections) {
+			raw = row.specimenSections[sectionIndex]?.tableData[0]?.[col] || "";
+		} else if (row[col.toLowerCase().replace(/ /g, "")]) {
+			raw = row[col.toLowerCase().replace(/ /g, "")] || "";
+		}
+		const val = values[keyName] ?? raw;
 		return (
 			<TableCell key={col} className="p-2">
 				<Input
@@ -153,7 +190,6 @@ export default function SpecimenSection({
 		);
 	};
 
-	// build rows: first base, then extras
 	const allRows = [{ type: "base" }].concat(
 		extraIds.map((id) => ({ type: "extra", extraId: id }))
 	);
@@ -166,7 +202,7 @@ export default function SpecimenSection({
 						{selectedId || "Select Specimen"}
 					</SelectTrigger>
 					<SelectContent>
-						{row.specimenIds?.map((id) => (
+						{specimenIds.map((id) => (
 							<SelectItem key={id} value={id}>
 								{id}
 							</SelectItem>
@@ -260,7 +296,9 @@ export default function SpecimenSection({
 					<TableBody>
 						{allRows.map(({ type, extraId }) => (
 							<TableRow key={type === "base" ? "base" : extraId}>
-								{displayColumns.map((col) => renderCell(col, idx, extraId))}
+								{displayColumns.map((col) =>
+									renderCell(col, idx, type === "extra" ? extraId : null)
+								)}
 								<TableCell className="p-2">
 									{type === "extra" && (
 										<Button

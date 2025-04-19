@@ -242,6 +242,9 @@ export default function Certificate({ certificate, group, pageStyle }) {
 			<CardFooter className="pt-4 flex-col">
 				<div className="self-start">
 					<p className="text-sm">
+						<strong>Remarks:</strong> {footer?.remarks || "N/A"}
+					</p>
+					<p className="text-sm">
 						<strong>Tested By:</strong> {footer?.testedBy || "N/A"}
 					</p>
 					<p className="text-sm">

@@ -9,18 +9,31 @@ export default function CertificateDetails({
 	onChange,
 	selected,
 }) {
+	console.log("CertificateDetails", { groupKey, row, values, selected });
 	const defaults = {
-		clientNameCert: selected.clientName,
+		clientNameCert: row.clientNameCert || selected.clientName,
 		projectNameCert: selected.projectName,
-		gripcoRefNo: selected.jobId,
+		gripcoRefNo: row.gripcoRefNo || selected.jobId,
 		dateOfSampling: selected.sampleDate?.split("T")[0],
 		issueDate: new Date().toISOString().split("T")[0],
 		dateOfTesting: row.plannedTestDate,
 		mtcNo: row.mtcNo,
 		testMethod: row.testMethod,
-		customerNameNo: row.customerName,
+		customerNameNo: row.customerNameNo,
 		customerPO: row.customerPO,
 		sampleDescription: row.itemDescription,
+		revisionNo: row.revisionNo,
+		poNumber: row.poNumber,
+		attn: row.attn,
+		labName:
+			row.labName || "GLOBAL RESOURCE INSPECTION CONTRACTING COMPANY-DAMMAM",
+		labAddress:
+			row.labAddress || "P.O. Box 100, Dammam 31411, Kingdom of Saudi Arabia",
+		materialGrade: row.materialGrade,
+		temperature: row.temperature,
+		humidity: row.humidity,
+		samplePrepMethod: row.samplePrepMethod,
+		testEquipment: row.testEquipment,
 	};
 
 	return (

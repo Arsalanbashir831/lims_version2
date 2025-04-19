@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-
 import { CERT_FIELDS, testMethods } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +12,6 @@ import {
 	SelectItem,
 } from "@/components/ui/select";
 import TestMethodCard from "./report-form/TestMethodCard";
-import { set } from "date-fns";
 
 async function fetchJSON(url) {
 	const res = await fetch(url);
@@ -38,63 +36,122 @@ export default function ReportForm({ initialData }) {
 				setRequests(data.testingRequests)
 			);
 	}, [isEdit]);
+
+	console.log("selected", selected);
+
 	useEffect(() => {
-		if (selected) {
-			const init = {};
-			selected.rows.forEach((r, i) => {
-				const key = `group-${i}-${r.testMethod}`;
-				init[key] = [0];
+		if (!selected) return;
+
+		const list = selected.rows || selected.groups || [];
+		const initSections = {};
+		const seedValues = {};
+		const seedCustom = {};
+
+		list.forEach((grp, i) => {
+			const key = `group-${i}-${grp.testMethod}`;
+			initSections[key] = [0];
+
+			// A) seed certificate fields
+			CERT_FIELDS.forEach(({ key: field }) => {
+				const dbVal = grp.certificateDetails?.[field];
+				const fallback = {
+					clientNameCert: selected.clientName,
+					projectNameCert: selected.projectName,
+					gripcoRefNo: selected.jobId,
+					dateOfSampling: selected.sampleDate?.split("T")[0],
+					issueDate: new Date().toISOString().split("T")[0],
+					dateOfTesting: grp.plannedTestDate,
+					mtcNo: grp.mtcNo,
+					testMethod: grp.testMethod,
+					customerNameNo: grp.customerNameNo,
+					customerPO: grp.customerPO,
+					sampleDescription: grp.itemDescription,
+					revisionNo: grp.revisionNo,
+					poNumber: grp.poNumber,
+					attn: grp.attn,
+					labName: grp.labName || "GLOBAL RESOURCE…",
+					labAddress: grp.labAddress || "P.O. Box 100…",
+					materialGrade: grp.materialGrade,
+					temperature: grp.temperature,
+					humidity: grp.humidity,
+					samplePrepMethod: grp.samplePrepMethod,
+					testEquipment: grp.testEquipment,
+				}[field];
+
+				seedValues[`cert-${key}-${field}`] = dbVal ?? fallback ?? "";
 			});
-			setSections(init);
-		}
+
+			// B) seed footer & remarks
+			seedValues[`remarks-${key}`] = grp.footer?.remarks ?? "";
+			seedValues[`cert-${key}-testedBy`] = grp.footer?.testedBy ?? "";
+			seedValues[`cert-${key}-witnessedBy`] = grp.footer?.witnessedBy ?? "";
+
+			const baseCols =
+				testMethods.find((t) => t.test_name === grp.testMethod)?.test_columns ||
+				[];
+
+			const actualCols = grp.specimenSections?.[0]?.tableData?.[0]
+				? Object.keys(grp.specimenSections[0].tableData[0])
+				: [];
+
+			// C) seed the specimen dropdown
+			seedValues[`${key}-specimen-0-id`] = grp.specimenIds?.[0] || "";
+
+			// D) seed custom columns (must have been saved on your certificate record)
+			seedCustom[key] = actualCols
+				.filter((col) => !baseCols.includes(col))
+				.map((name) => ({
+					name,
+					pos: actualCols.indexOf(name),
+				}));
+		});
+
+		// apply
+		setSections(initSections);
+		setValues((prev) => ({ ...seedValues, ...prev }));
+		setCustomColumns((prev) => ({ ...seedCustom, ...prev }));
 	}, [selected]);
 
 	const rowGroups = useMemo(
 		() =>
-			(selected?.rows || []).map((r, i) => ({
+			(selected?.rows || selected?.groups || []).map((r, i) => ({
 				key: `group-${i}-${r.testMethod}`,
 				row: r,
 			})),
 		[selected]
 	);
 
-	// Update any field in the form
 	const handleChange = (fieldKey, value) =>
 		setValues((prev) => ({ ...prev, [fieldKey]: value }));
 
-	// Add a new specimen section for a given group
 	const addSection = (groupKey) =>
 		setSections((prev) => ({
 			...prev,
 			[groupKey]: [...prev[groupKey], prev[groupKey].length],
 		}));
 
-	// Remove an existing specimen section by index
-	const removeSection = (groupKey, sectionIndex) =>
+	const removeSection = (groupKey, idx) =>
 		setSections((prev) => ({
 			...prev,
-			[groupKey]: prev[groupKey].filter((i) => i !== sectionIndex),
+			[groupKey]: prev[groupKey].filter((i) => i !== idx),
 		}));
 
-	// Add an extra (user‑added) row to a specimen table
 	const addExtraRow = (specimenKey) =>
 		setExtraRows((prev) => ({
 			...prev,
 			[specimenKey]: [...(prev[specimenKey] || []), Date.now()],
 		}));
 
-	// Remove a specific extra row by its unique ID
-	const removeExtraRow = (specimenKey, extraId) =>
+	const removeExtraRow = (specimenKey, id) =>
 		setExtraRows((prev) => ({
 			...prev,
-			[specimenKey]: (prev[specimenKey] || []).filter((id) => id !== extraId),
+			[specimenKey]: prev[specimenKey].filter((x) => x !== id),
 		}));
 
 	const handleSubmit = async () => {
 		if (!selected) return;
 		setSubmitting(true);
 
-		// Build payload
 		const payload = {
 			requestId: selected.requestId,
 			jobId: selected.jobId,
@@ -104,80 +161,87 @@ export default function ReportForm({ initialData }) {
 			groups: [],
 		};
 
-		// Iterate each test-method/row group
 		rowGroups.forEach(({ key: groupKey, row }) => {
-			// Certificate-level details
+			// certificate details: fallback to original row.certificateDetails when undefined in values
 			const certificateDetails = {};
 			CERT_FIELDS.forEach(({ key }) => {
 				const fieldKey = `cert-${groupKey}-${key}`;
-				certificateDetails[key] = values[fieldKey] ?? "";
+				certificateDetails[key] = values[fieldKey];
 			});
 
-			// Fetch test definition and section indexes
+			// columns including custom
 			const baseCols = testMethods.find(
 				(t) => t.test_name === row.testMethod
 			).test_columns;
-
 			const customForThis = customColumns[groupKey] || [];
-
 			const displayColumns = [...baseCols];
 			customForThis
 				.slice()
 				.sort((a, b) => a.pos - b.pos)
-				.forEach(({ name, pos }) => displayColumns.splice(pos, 0, name));
+				.forEach((c) => displayColumns.splice(c.pos, 0, c.name));
 
-			// 3) for each specimen section
+			// specimen sections
 			const sectionIndexes = sections[groupKey] || [];
 			const specimenSections = sectionIndexes.map((sectionIndex) => {
+				const specimenIdKey = `${groupKey}-specimen-${sectionIndex}-id`;
 				const specimenId =
-					values[`${groupKey}-specimen-${sectionIndex}-id`] || "";
+					values[specimenIdKey] ||
+					row.specimenSections?.[sectionIndex]?.specimenId ||
+					"";
 
-				// build your tableData rows
+				// build tableData rows
 				const tableData = [];
-
-				// base row is always rowIndex 0
+				// base row
 				const baseRow = {};
 				displayColumns.forEach((col) => {
 					const fieldKey = `${groupKey}-specimen-${sectionIndex}-0-${col}`;
-					let val = values[fieldKey];
-					if (val === undefined) {
-						// fallback to original row property if it exists
-						val = row[col] ?? "";
+					let val;
+					if (values[fieldKey] !== undefined) {
+						val = values[fieldKey];
+					} else {
+						// fallback to original tableData
+						val =
+							row.specimenSections?.[sectionIndex]?.tableData[0]?.[col] ?? "";
 					}
-					// unwrap images
-					if (col.toLowerCase() === "images" && typeof val === "object") {
+					if (col.toLowerCase() === "images" && typeof val === "object")
 						val = val.downloadURL;
-					}
 					baseRow[col] = val;
 				});
 				tableData.push(baseRow);
 
-				// then extra rows
-				const extras = extraRows[`${groupKey}-specimen-${sectionIndex}`] || [];
-				extras.forEach((extraId) => {
-					const extraRow = {};
-					displayColumns.forEach((col) => {
-						const fieldKey = `${groupKey}-specimen-${sectionIndex}-extra-${extraId}-${col}`;
-						let val = values[fieldKey] || "";
-						if (col.toLowerCase() === "images" && typeof val === "object") {
-							val = val.downloadURL;
-						}
-						extraRow[col] = val;
-					});
-					tableData.push(extraRow);
-				});
+				// extra rows
+				(extraRows[`${groupKey}-specimen-${sectionIndex}`] || []).forEach(
+					(extraId) => {
+						const extraRow = {};
+						displayColumns.forEach((col) => {
+							const fieldKey = `${groupKey}-specimen-${sectionIndex}-extra-${extraId}-${col}`;
+							let val = values[fieldKey] || "";
+							if (col.toLowerCase() === "images" && typeof val === "object")
+								val = val.downloadURL;
+							extraRow[col] = val;
+						});
+						tableData.push(extraRow);
+					}
+				);
 
-				// return { specimenId, tableData: [baseRow, ...extras] };
 				return { specimenId, tableData };
 			});
 
-			// Footer
 			const footer = {
-				testedBy: values[`cert-${groupKey}-testedBy`] || "",
-				witnessedBy: values[`cert-${groupKey}-witnessedBy`] || "",
+				remarks: values[`remarks-${groupKey}`] || row.footer?.remarks || "",
+				testedBy:
+					values[`cert-${groupKey}-testedBy`] || row.footer?.testedBy || "",
+				witnessedBy:
+					values[`cert-${groupKey}-witnessedBy`] ||
+					row.footer?.witnessedBy ||
+					"",
 			};
 
-			// Push group
+			const defaultGroupKey = `group-0-${rowGroups[0].row.testMethod}`;
+			payload.projectName =
+				values[`cert-${defaultGroupKey}-projectNameCert`] ||
+				selected.projectName;
+
 			payload.groups.push({
 				testMethod: row.testMethod,
 				certificateDetails,
@@ -186,11 +250,10 @@ export default function ReportForm({ initialData }) {
 			});
 		});
 
-		console.log("Payload to submit:", payload);
+		console.log("Payload:", payload);
 		// setSubmitting(false);
 		// return;
 
-		// Send to API
 		try {
 			const url = isEdit
 				? `/api/certificates/${selected.id}`
@@ -202,8 +265,8 @@ export default function ReportForm({ initialData }) {
 				body: JSON.stringify(payload),
 			});
 			router.push("/reports");
-		} catch (error) {
-			console.error("Error submitting form:", error);
+		} catch (e) {
+			console.error(e);
 		} finally {
 			setSubmitting(false);
 		}
@@ -215,8 +278,7 @@ export default function ReportForm({ initialData }) {
 				<Card>
 					<CardContent className="flex items-center space-x-4">
 						<label className="font-medium text-gray-700">
-							{" "}
-							Select the Request to Generate Certificate
+							Select the Request
 						</label>
 						<Select
 							value={selected?.requestId || ""}
@@ -240,7 +302,7 @@ export default function ReportForm({ initialData }) {
 			{selected && (
 				<>
 					<h2 className="text-2xl font-bold">
-						Test Method Details for Request {selected.requestId}
+						Details for {selected.requestId}
 					</h2>
 					{rowGroups.map(({ key, row }) => (
 						<TestMethodCard
@@ -271,7 +333,7 @@ export default function ReportForm({ initialData }) {
 					))}
 					<div className="flex justify-end">
 						<Button onClick={handleSubmit} disabled={submitting}>
-							{submitting ? "Submitting..." : "Submit"}
+							{submitting ? "Submitting…" : "Submit"}
 						</Button>
 					</div>
 				</>
