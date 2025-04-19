@@ -17,10 +17,35 @@ export default function MethodPreviewTable({ testMethod, tableData }) {
 		return <p>No table data available.</p>;
 	}
 
-	// Derive column headers from the first row's keys, excluding images/notes
-	const allCols = Object.keys(tableData[0]).filter(
+	// Derive all column keys from the first row
+	const rawCols = Object.keys(tableData[0]);
+
+	// Exclude images and notes
+	const filteredCols = rawCols.filter(
 		(col) => col.toLowerCase() !== "images" && col.toLowerCase() !== "notes"
 	);
+
+	// Separate out acceptance criteria and remarks
+	const remarksCol = filteredCols.find(
+		(col) => col.toLowerCase() === "remarks"
+	);
+	const acceptanceCol = filteredCols.find(
+		(col) => col.toLowerCase() === "acceptable criteria as per astm a105n"
+	);
+
+	// All other columns
+	const otherCols = filteredCols.filter(
+		(col) =>
+			col.toLowerCase() !== "remarks" &&
+			col.toLowerCase() !== "acceptable criteria as per astm a105n"
+	);
+
+	// Final ordering: all others, then acceptable criteria, then remarks
+	const allCols = [
+		...otherCols,
+		...(acceptanceCol ? [acceptanceCol] : []),
+		...(remarksCol ? [remarksCol] : []),
+	];
 
 	return (
 		<table
