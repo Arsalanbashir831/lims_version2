@@ -18,6 +18,8 @@ export default function TestMethodCard({
 	onRemoveRow,
 	onRemoveSection,
 	selected,
+	customCols,
+	setCustomCols,
 }) {
 	const columns =
 		testMethods.find((t) => t.test_name === row.testMethod)?.test_columns || [];
@@ -55,6 +57,8 @@ export default function TestMethodCard({
 						onAddRow={onAddRow}
 						onRemoveRow={onRemoveRow}
 						onRemoveSection={onRemoveSection}
+						customCols={customCols}
+						setCustomCols={setCustomCols}
 					/>
 				))}
 				{/* Remarks Field */}

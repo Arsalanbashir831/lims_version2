@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
-import { testMethods } from "@/lib/constants";
+import { CERT_FIELDS, testMethods } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import {
 	SelectItem,
 } from "@/components/ui/select";
 import TestMethodCard from "./report-form/TestMethodCard";
+import { set } from "date-fns";
 
 async function fetchJSON(url) {
 	const res = await fetch(url);
@@ -47,8 +48,6 @@ export default function ReportForm({ initialData }) {
 			setSections(init);
 		}
 	}, [selected]);
-
-	console.log("selected", selected);
 
 	const rowGroups = useMemo(
 		() =>
@@ -118,17 +117,14 @@ export default function ReportForm({ initialData }) {
 			const baseCols = testMethods.find(
 				(t) => t.test_name === row.testMethod
 			).test_columns;
-			const customForThis = customColumns[groupKey] || [];
-			// make a shallow copy
-			const displayColumns = [...baseCols];
 
-			// sort your custom definitions by pos then splice them in
+			const customForThis = customColumns[groupKey] || [];
+
+			const displayColumns = [...baseCols];
 			customForThis
 				.slice()
 				.sort((a, b) => a.pos - b.pos)
-				.forEach(({ name, pos }) => {
-					displayColumns.splice(pos, 0, name);
-				});
+				.forEach(({ name, pos }) => displayColumns.splice(pos, 0, name));
 
 			// 3) for each specimen section
 			const sectionIndexes = sections[groupKey] || [];
@@ -171,7 +167,8 @@ export default function ReportForm({ initialData }) {
 					tableData.push(extraRow);
 				});
 
-				return { specimenId, tableData: [baseRow, ...extras] };
+				// return { specimenId, tableData: [baseRow, ...extras] };
+				return { specimenId, tableData };
 			});
 
 			// Footer
@@ -190,6 +187,8 @@ export default function ReportForm({ initialData }) {
 		});
 
 		console.log("Payload to submit:", payload);
+		// setSubmitting(false);
+		// return;
 
 		// Send to API
 		try {
@@ -258,8 +257,15 @@ export default function ReportForm({ initialData }) {
 							onRemoveSection={removeSection}
 							selected={selected}
 							customCols={customColumns[key] || []}
-							setCustomCols={(cols) =>
-								setCustomColumns((prev) => ({ ...prev, [key]: cols }))
+							setCustomCols={(updaterOrArray) =>
+								setCustomColumns((prev) => {
+									const prevCols = prev[key] || [];
+									const newCols =
+										typeof updaterOrArray === "function"
+											? updaterOrArray(prevCols)
+											: updaterOrArray;
+									return { ...prev, [key]: newCols };
+								})
 							}
 						/>
 					))}

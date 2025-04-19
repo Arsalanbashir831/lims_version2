@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
@@ -28,6 +28,8 @@ import {
 	SelectTrigger,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { X } from "lucide-react";
+import Image from "next/image";
 
 export default function SpecimenSection({
 	groupKey,
@@ -41,14 +43,12 @@ export default function SpecimenSection({
 	onAddRow,
 	onRemoveRow,
 	onRemoveSection,
+	customCols,
+	setCustomCols,
 }) {
-	// Manage custom columns inserted by user
-	const [customCols, setCustomCols] = useState([]); // { name, pos }
-	// For inline editing of column names
 	const [editingIndex, setEditingIndex] = useState(null);
 	const [tempName, setTempName] = useState("");
 
-	// Calculate the combined header list including custom columns
 	const displayColumns = useMemo(() => {
 		const base = [...columns];
 		customCols
@@ -62,22 +62,101 @@ export default function SpecimenSection({
 	const idKey = `${specimenKey}-id`;
 	const selectedId = values[idKey] || row.specimenIds?.[0] || "";
 
-	function addColumn(at, after) {
-		const name = "New Column";
-		const pos = after ? at + 1 : at;
-		setCustomCols((prev) => [...prev, { name, pos }]);
-		setMenuIndex(null);
-	}
+	const addColumn = useCallback(
+		(at, after) => {
+			const pos = after ? at + 1 : at;
+			setCustomCols([...customCols, { name: "New Column", pos }]);
+		},
+		[customCols, setCustomCols]
+	);
 
-	const handleDeleteImage = async (keyName) => {
-		const cellVal = values[keyName];
-		if (cellVal?.storagePath) {
-			try {
-				await deleteObject(ref(storage, cellVal.storagePath));
-			} catch {}
+	const handleUploadImage = useCallback(
+		async (keyName, file) => {
+			const preview = URL.createObjectURL(file);
+			const storagePath = `certificates/${requestId}/${file.name}`;
+			const snap = await uploadBytes(ref(storage, storagePath), file);
+			const downloadURL = await getDownloadURL(snap.ref);
+			onChange(keyName, { preview, downloadURL, storagePath });
+		},
+		[onChange, requestId]
+	);
+
+	const handleDeleteImage = useCallback(
+		async (keyName) => {
+			const cellVal = values[keyName];
+			if (cellVal?.storagePath) {
+				try {
+					await deleteObject(ref(storage, cellVal.storagePath));
+				} catch (error) {
+					console.error("Error deleting image:", error);
+				}
+			}
+			onChange(keyName, null);
+		},
+		[onChange, values]
+	);
+
+	const renderCell = (col, sectionIndex, extraId = null) => {
+		const rowType = extraId ? "extra" : "base";
+		const keyName = `${groupKey}-specimen-${idx}-${
+			rowType === "base" ? 0 : `extra-${extraId}`
+		}-${col}`;
+		if (col.toLowerCase() === "images") {
+			const val = values[keyName] || {};
+			const preview = val?.preview || null;
+			return (
+				<TableCell key={col} className="relative p-2">
+					{preview !== null ? (
+						<div className="relative h-24">
+							<Image
+								src={preview}
+								alt="Preview"
+								width={96}
+								height={96}
+								className="w-full h-full object-contain"
+							/>
+							<Button
+								variant="secondary"
+								size="icon"
+								className="absolute -top-2 -right-1 z-10 p-0.5 w-fit h-fit rounded-full hover:bg-secondary"
+								onClick={() => handleDeleteImage(keyName)}>
+								<X className="h-2 w-2" />
+							</Button>
+						</div>
+					) : (
+						<label className="w-24 h-24 border-dashed border-2 border-gray-300 flex items-center justify-center cursor-pointer text-gray-400">
+							<span>Upload</span>
+							<input
+								type="file"
+								accept="image/*"
+								className="hidden"
+								onChange={(e) => {
+									const file = e.target.files?.[0];
+									if (file) handleUploadImage(keyName, file);
+								}}
+							/>
+						</label>
+					)}
+				</TableCell>
+			);
 		}
-		onChange(keyName, null);
+		const val =
+			values[keyName] ?? (row[col.toLowerCase().replace(/ /g, "")] || "");
+		return (
+			<TableCell key={col} className="p-2">
+				<Input
+					value={val}
+					onChange={(e) => onChange(keyName, e.target.value)}
+					size="sm"
+				/>
+			</TableCell>
+		);
 	};
+
+	// build rows: first base, then extras
+	const allRows = [{ type: "base" }].concat(
+		extraIds.map((id) => ({ type: "extra", extraId: id }))
+	);
 
 	return (
 		<div className="border rounded-lg p-4 bg-white shadow-sm mb-6">
@@ -119,26 +198,23 @@ export default function SpecimenSection({
 													value={tempName}
 													onChange={(e) => setTempName(e.target.value)}
 													onBlur={() => {
-														setCustomCols((prev) =>
-															prev.map((c) =>
+														setCustomCols(
+															customCols.map((c) =>
 																c.pos === i ? { ...c, name: tempName } : c
 															)
 														);
 														setEditingIndex(null);
 													}}
-													onKeyDown={(e) => {
-														if (e.key === "Enter") e.currentTarget.blur();
-													}}
+													onKeyDown={(e) =>
+														e.key === "Enter" && e.currentTarget.blur()
+													}
 													className="border p-1 w-fit"
 												/>
 											) : (
 												<span
-													onDoubleClick={() => {
-														if (isCustom) {
-															setEditingIndex(i);
-															setTempName(col);
-														}
-													}}
+													onDoubleClick={() =>
+														isCustom && (setEditingIndex(i), setTempName(col))
+													}
 													className="cursor-pointer text-center">
 													{col}
 												</span>
@@ -152,7 +228,7 @@ export default function SpecimenSection({
 														+
 													</Button>
 												</PopoverTrigger>
-												<PopoverContent>
+												<PopoverContent className="flex flex-col space-y-2 p-2 max-w-[150px]">
 													<Button size="sm" onClick={() => addColumn(i, false)}>
 														Add Before
 													</Button>
@@ -164,11 +240,11 @@ export default function SpecimenSection({
 															size="sm"
 															variant="destructive"
 															onClick={() =>
-																setCustomCols((prev) =>
-																	prev.filter((c) => c.pos !== i)
+																setCustomCols(
+																	customCols.filter((c) => c.pos !== i)
 																)
 															}>
-															Remove Column
+															Remove
 														</Button>
 													)}
 												</PopoverContent>
@@ -182,95 +258,18 @@ export default function SpecimenSection({
 					</TableHeader>
 
 					<TableBody>
-						{/* Base Row */}
-						<TableRow>
-							{displayColumns.map((col) => {
-								const keyName = `${groupKey}-specimen-${idx}-0-${col}`;
-								const raw = row[col.toLowerCase().replace(/ /g, "")] || "";
-								const val = values[keyName] ?? raw;
-								if (col.toLowerCase() === "images") {
-									const preview = val?.preview || val;
-									return (
-										<TableCell key={col} className="relative p-2">
-											{preview ? (
-												<div className="relative h-24">
-													<img
-														src={preview}
-														alt="Preview"
-														className="w-full h-full object-contain"
-													/>
-													<Button
-														variant="ghost"
-														size="icon"
-														className="absolute top-1 right-1"
-														onClick={() => handleDeleteImage(keyName)}>
-														×
-													</Button>
-												</div>
-											) : (
-												<label className="block w-24 h-24 border-dashed border-2 border-gray-300 flex items-center justify-center cursor-pointer text-gray-400">
-													<span>Upload</span>
-													<input
-														type="file"
-														accept="image/*"
-														className="hidden"
-														onChange={async (e) => {
-															const file = e.target.files?.[0];
-															if (!file) return;
-															const preview = URL.createObjectURL(file);
-															const path = `certificates/${requestId}/${file.name}`;
-															const snap = await uploadBytes(
-																ref(storage, path),
-																file
-															);
-															const url = await getDownloadURL(snap.ref);
-															onChange(keyName, {
-																preview,
-																downloadURL: url,
-																storagePath: path,
-															});
-														}}
-													/>
-												</label>
-											)}
-										</TableCell>
-									);
-								}
-								return (
-									<TableCell key={col} className="p-2">
-										<Input
-											value={val}
-											onChange={(e) => onChange(keyName, e.target.value)}
-											size="sm"
-										/>
-									</TableCell>
-								);
-							})}
-							<TableCell className="p-2" />
-						</TableRow>
-						{/* Extra Rows - unchanged, mapping displayColumns similarly */}
-						{extraIds.map((extraId) => (
-							<TableRow key={extraId}>
-								{displayColumns.map((col) => {
-									const keyName = `${groupKey}-specimen-${idx}-extra-${extraId}-${col}`;
-									const val = values[keyName] || "";
-									return (
-										<TableCell key={col} className="p-2">
-											<Input
-												value={val}
-												onChange={(e) => onChange(keyName, e.target.value)}
-												size="sm"
-											/>
-										</TableCell>
-									);
-								})}
+						{allRows.map(({ type, extraId }) => (
+							<TableRow key={type === "base" ? "base" : extraId}>
+								{displayColumns.map((col) => renderCell(col, idx, extraId))}
 								<TableCell className="p-2">
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => onRemoveRow(specimenKey, extraId)}>
-										Remove Row
-									</Button>
+									{type === "extra" && (
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => onRemoveRow(specimenKey, extraId)}>
+											Remove Row
+										</Button>
+									)}
 								</TableCell>
 							</TableRow>
 						))}
